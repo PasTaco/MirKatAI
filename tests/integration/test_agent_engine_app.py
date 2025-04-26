@@ -36,6 +36,9 @@ def test_agent_stream_query(agent_app: AgentEngineApp) -> None:
         "messages": [
             {"type": "human", "content": "Test message"},
         ],
+        "table": None,
+        "answer": None,
+        "finished": False,
         "user_id": "test-user",
         "session_id": "test-session",
     }

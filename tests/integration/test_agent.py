@@ -26,7 +26,8 @@ def test_agent_stream() -> None:
             {"type": "human", "content": "Hi"},
             {"type": "ai", "content": "Hi there!"},
             {"type": "human", "content": "What's the weather in NY?"},
-        ]
+        ],
+        "answer": None,
     }
 
     events = [

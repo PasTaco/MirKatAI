@@ -421,36 +421,36 @@ class GraphState(TypedDict):
 def human_node(state: GraphState) -> GraphState:
     """Display the last model message to the user, and rec
     eive the user's input."""
-    #print("\n--- ENTERING: human_node ---")
-    last_msg = state["messages"][-1]
+    print("\n--- ENTERING: human_node ---")
+    last_msg = state["messages"]
     answer = state["answer"]
     support = None
     chunks = None
-    #print(F"----- ANSWER: {answer} -------")
+    print(F"----- ANSWER: {answer} -------")
     if isinstance(last_msg, AIMessage) or isinstance(last_msg, GenerateContentResponse):
         if answer:
-            #print("Assistant:", answer)
-            display(Markdown(answer))
+            print("Assistant:", answer)
+            #display(Markdown(answer))
             state["answer"] = None
             #print()
         else:
-            #print("Assistant:", last_msg.content)
-            display(Markdown(last_msg.content))
+            print("Assistant:", last_msg.content)
+            #display(Markdown(last_msg.content))
     print("="*30)
-
-    user_input = input("User: ")
+    return state
+    #user_input = input("User: ")
 
     # If it looks like the user is trying to quit, flag the conversation
     # as over.
-    if user_input.strip().lower() in {"q", "quit", "exit", "goodbye", "bye", "thanks that's all"}:
-        state["finished"] = True
+    #if user_input.strip().lower() in {"q", "quit", "exit", "goodbye", "bye", "thanks that's all"}:
+    #    state["finished"] = True
 
     #return state | {"messages": [("user", user_input)]}
-    return {
-        "messages": state["messages"] +[HumanMessage(content=user_input)],
-        "table": state["table"],
-        "answer": state["answer"],
-        "finished": state["finished"]}
+    #return {
+    #    "messages": state["messages"] +[HumanMessage(content=user_input)],
+    #    "table": state["table"],
+    #    "answer": state["answer"],
+    #    "finished": state["finished"]}
 
 def chatbot_with_tools(state: GraphState) -> GraphState:
     """The chatbot with tools. A simple wrapper around the model's own chat interface."""
@@ -458,6 +458,7 @@ def chatbot_with_tools(state: GraphState) -> GraphState:
 
     
     messages = state['messages']
+    answer = None
 
     # Check if this is the very first turn (no messages yet)
     if not messages:
@@ -469,22 +470,26 @@ def chatbot_with_tools(state: GraphState) -> GraphState:
         print("--- Calling Master Router LLM ---")
         # Always invoke with the system message + current history
         print(f"--- Message going to the llm_master: {messages}---")
-        response = llm_master.invoke([MIRNA_ASSISTANT_SYSTEM_MESSAGE] + messages)
-        if response.content.strip() == "***ANSWER_DIRECTLY***":
-            response = llm_master.invoke([ORIGINAL_MIRNA_SYSINT_CONTENT_MESSAGE] + messages)
+        #messages_with_system = [{"type": "system", "content": MIRNA_ASSISTANT_SYSTEM_MESSAGE}] + state["messages"]
+        response = llm_master.invoke(str(MIRNA_ASSISTANT_SYSTEM_MESSAGE) + str(state["messages"]))
+        if "***ANSWER_DIRECTLY***" in response.content.strip():
+            #response = llm_master.invoke([ORIGINAL_MIRNA_SYSINT_CONTENT_MESSAGE] + messages)
+            response.content = response.content.replace("***ANSWER_DIRECTLY***", "")
             answer = response.content
         print(f"--- Master Router Raw Response: {response.content} ---")
 
     # Update state
-    return {
-        **state, # Preserve other state fields
-        "messages": state["messages"] + [response] # Add the router's decision/response
+    state = state | {
+        "messages": response.content , # Add the router's decision/response
+        "answer": answer, # Update answer with the router's response
+        "finished": state.get("finished", False), # Use .get for safety
     }
+    return state
 
 def sql_processor_node(state: GraphState) -> GraphState:
     """The sql llm that will check for the sql questions and get a json file in response."""
     print("--- Calling SQL Processor Node ---")
-    messages = [state['messages'][-2].content]
+    messages = [state['messages']]
     if not messages:
         # Should ideally not happen if routing is correct
         #print("Warning: SQL processor called with no messages.")
@@ -510,7 +515,7 @@ def sql_processor_node(state: GraphState) -> GraphState:
     new_messages = messages + [AIMessage(content=new_answer)]
     #print(f"--- Answer from SQL Processor LLM Response: {new_answer} ---")
     return {
-        "messages": new_messages,
+        "messages": response.content,
         "table": queries, # Use .get for safety
         "answer": new_answer, # Return the potentially updated answer
         "finished": state.get("finished", False), # Use .get for safety
@@ -525,7 +530,7 @@ def literature_search_node(state: GraphState) -> GraphState:
     - Bibliography: References, link and website use to obtain the answer
     - ResearcQueries: Quesries used to perform GroundSearch"""
     #print("\n--- ENTERING: Literature node ---")
-    user_query = state["messages"][-1].content
+    user_query = state["messages"]
     #print(f"\n--- SEARCHING {user_query} with GroundSearch model ---")
 
     # --- Grounding Setup ---
@@ -558,7 +563,7 @@ def literature_search_node(state: GraphState) -> GraphState:
 
 
     return {
-        "messages": state["messages"] +[AIMessage(content=answer)],
+        "messages": answer,
         "table" : state["table"],
         "answer": answer,
         "bibliography": bibliography,
@@ -615,6 +620,7 @@ def route_after_human(state: GraphState) -> Literal["chatbot_router", "__end__"]
     If the 'finished' flag is set, ends the graph.
     Otherwise, directs the conversation to the main chatbot.
     """
+    return END
     #print("\n--- ROUTING: route_after_human ---")
     if state.get("finished", False):
         #print("--- Routing: Human to END ---")
@@ -635,8 +641,7 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
         #print("--- Routing Error: No messages found in route_chatbot_decision ---")
         return END # Or raise error
 
-    last_message = messages[-1]
-    
+    last_message = messages
     if not isinstance(last_message, AIMessage) :
         #print(f"--- Routing Warning: Expected AIMessage, got {type(last_message)}. Routing to Human. ---")
         return HUMAN_NODE
@@ -645,7 +650,7 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
     
     # Check for routing keywords first
     if "***ROUTE_TO_SQL***" in content:
-        #print("--- Routing: Master Router to SQL Processor ---")
+        print("--- Routing: Master Router to SQL Processor ---")
         return SQL_NODE
     elif "***ROUTE_TO_LITERATURE***" in content:
         #print("--- Routing: Master Router to Literature Searcher ---")
@@ -655,19 +660,22 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
         #print("--- Routing: Master Router to END ---")
         return END
     elif "***ANSWER_DIRECTLY***" in content:
+        content = content.replace("***ANSWER_DIRECTLY***", "")
+        print(f"--- The answer directly was: {content}")
          #print("--- Routing: Master Router to Human (Direct Answer) ---")
          # Remove the keyword itself before showing to human
-         state['messages'][-1].content = content.replace("***ANSWER_DIRECTLY***", "").strip()
-         # If the content is *only* the keyword, maybe add a placeholder?
-         #if not state['messages'][-1].content:
-         x = state['messages'][-2].content#.candidates[0].content.parts[0].text
-         print(f"This is the message puto!!!{x}")
-         #print (f"--- The messages directly was: {x}")
-         answer = llm_master.invoke(x) #"Okay, let me answer that." # Or similar
-         state['messages'][-1].content = re.sub(r'[*_`~#\[\]()]', '', answer.content)
-         #print (f"--- The answer directly was: {answer}")
-         state['answer'] = answer#.response.candidates[0].content.parts[0].text
-         return HUMAN_NODE
+        #  state['messages'][-1].content = content.replace("***ANSWER_DIRECTLY***", "").strip()
+        #  # If the content is *only* the keyword, maybe add a placeholder?
+        #  #if not state['messages'][-1].content:
+        #  x = state['messages'][-2].content[0]['text']
+        #  print(f"\n\n\n\nThis is the message puto!!!{x}\n\n\n\n")
+        #  #print (f"--- The messages directly was: {x}")
+        #  answer = llm_master.invoke(x) #"Okay, let me answer that." # Or similar
+        state['messages'].content = str(content)
+        #  #print (f"--- The answer directly was: {answer}")
+        state['answer'] = str(content)#.response.candidates[0].content.parts[0].text
+        print(f"\n\n\n BEFORE CALLING HUMAN NODE \n\n\n\n")
+        return HUMAN_NODE
     elif "***PLOT***" in content:
         #print("---- Routing to plot node ----")
         return PLOT_NODE
@@ -675,7 +683,8 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
          # Assume it's a direct answer or clarification question if no keyword is found
          #print("--- Routing: Master Router to Human (Direct Answer) ---")
          # Remove potential keywords just in case they were missed but shouldn't be shown
-         state['messages'][-1].content = content.replace("***ROUTE_TO_SQL***", "").replace("***ROUTE_TO_LITERATURE***", "").replace("***FINISH***", "").replace("***ANSWER_DIRECTLY***", "").strip()
+         state['messages'].content = content.replace("***ROUTE_TO_SQL***", "").replace("***ROUTE_TO_LITERATURE***", "").replace("***FINISH***", "").replace("***ANSWER_DIRECTLY***", "").strip()
+         print(f"\n\n\n BEFORE CALLING HUMAN NODE  (2) \n\n\n\n")
          return HUMAN_NODE
 
 # Router 3: After a Specialist Processor Node (`sql_processor_node`, `literature_search_node`)
