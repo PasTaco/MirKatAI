@@ -641,7 +641,9 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
         return HUMAN_NODE
         
     content = last_message.content.strip()
-    
+
+    print(f"\n\n\n{last_message}\n\n\n")
+
     # Check for routing keywords first
     if "***ROUTE_TO_SQL***" in content:
         #print("--- Routing: Master Router to SQL Processor ---")
@@ -668,7 +670,7 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
         state['messages'][-1].content = str(content)
         #  #print (f"--- The answer directly was: {answer}")
         state['answer'] = str(content)#.response.candidates[0].content.parts[0].text
-        print(f"\n\n\n BEFORE CALLING HUMAN NODE \n\n\n\n")
+        print(f"\n\n\n BEFORE CALLING HUMAN NODE {type(HUMAN_NODE)} \n\n\n\n")
         return HUMAN_NODE
     elif "***PLOT***" in content:
         #print("---- Routing to plot node ----")
