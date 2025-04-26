@@ -1,0 +1,108 @@
+Column Name,Data Type,Constraints,Description,Table
+3p_consistent,float,"NOT NULL, DEFAULT '0'",3p consistency value,confidence
+3p_count,float,"NOT NULL, DEFAULT '0'",Count of 3p reads,confidence
+3p_mature_consistent,"decimal(4,0)","NOT NULL, DEFAULT '0'",3p mature consistency value,confidence
+3p_overhang,int(2),DEFAULT NULL,3p overhang value,confidence
+3p_raw_count,float,"NOT NULL, DEFAULT '0'",Raw count of 3p reads,confidence
+5p_consistent,float,"NOT NULL, DEFAULT '0'",5p consistency value,confidence
+5p_count,double,"NOT NULL, DEFAULT '0'",Count of 5p reads,confidence
+5p_mature_consistent,"decimal(4,0)","NOT NULL, DEFAULT '0'",5p mature consistency value,confidence
+5p_overhang,int(2),DEFAULT NULL,5p overhang value,confidence
+5p_raw_count,float,"NOT NULL, DEFAULT '0'",Raw count of 5p reads,confidence
+auto_mirna,int(10),"NOT NULL, DEFAULT '0'",Auto-incremented miRNA ID,confidence
+energy_by_length,float,NOT NULL,Energy by length,confidence
+energy_precursor,float,DEFAULT '0',Energy precursor value,confidence
+exp_count,int(5),"NOT NULL, DEFAULT '0'",Experiment count,confidence
+mirdeep_score,double,"NOT NULL, DEFAULT '0'",miRDeep score,confidence
+mirna_id,varchar(20),"NOT NULL, DEFAULT ''",miRNA identifier,confidence
+paired_hairpin,float,"NOT NULL, DEFAULT '0'",Paired hairpin value,confidence
+auto_mirna,int(10),NOT NULL,Auto-incremented miRNA ID,confidence_score
+confidence,int(2),"NOT NULL, DEFAULT '0'","Confidence score, 0 (Low Confidence), 1 (Medium Confidence) and 2 (High Confidence)",confidence_score
+comment,mediumtext,None,Comments,dead_mirna
+forward_to,varchar(20),DEFAULT NULL,Forward to miRNA,dead_mirna
+mirna_acc,varchar(9),"NOT NULL, DEFAULT ''",miRNA accession,dead_mirna
+mirna_id,varchar(40),"NOT NULL, DEFAULT ''",miRNA identifier,dead_mirna
+previous_id,varchar(100),DEFAULT NULL,Previous miRNA identifier,dead_mirna
+binding_site,text,None,Coordinates of the binding site,gene_mirna
+mirna_mature,varchar(30),NOT NULL,Mature miRNA ID,gene_mirna
+mrna,varchar(30),NOT NULL,"mRNA identifier, can be gene symbol or refseq name",gene_mirna
+probability,float,"NOT NULL, DEFAULT '0'",Probability of the binding. This is only tre for miRDB and is from 0 to 100,gene_mirna
+sequence,text,None,Binding sequence,gene_mirna
+source,varchar(30),NOT NULL,Source database,gene_mirna
+gene_symbol,varchar(30),NOT NULL,Gene symbol gene name,gene_names
+RefSeq_mRNA,varchar(30),NOT NULL,Ref seq mrna Gene name,gene_names
+author,tinytext,None,Author of the reference,literature_references
+auto_lit,int(10) unsigned,"NOT NULL, AUTO_INCREMENT",Auto-incremented literature ID,literature_references
+journal,tinytext,None,Journal of the reference,literature_references
+medline,int(10) unsigned,DEFAULT NULL,Medline ID,literature_references
+title,tinytext,None,Title of the reference,literature_references
+auto_db,int(10) unsigned,"NOT NULL, DEFAULT '0'",Auto-incremented database ID,mature_database_links
+auto_mature,int(10) unsigned,"NOT NULL, DEFAULT '0'",Auto -incremental Mature miRNA ID of mirBase,mature_database_links
+display_name,tinytext,NOT NULL,Display name of the database,mature_database_links
+link,tinytext,NOT NULL,Link to the database,mature_database_links
+auto_mirna,int,NOT NULL,Auto-incremented miRNA ID,mirna
+auto_species,int,NOT NULL,The mirBase ID of species that is linked to mirna_species,mirna
+comment,longtext,None,"Some information of the microRNA, some examples are where is it found, what function it may have, etc.",mirna
+dead_flag,tinyint(1),NOT NULL,"0 not dead, 1 dead",mirna
+description,varchar(100),None,Short description of the microRNA,mirna
+mirna_acc,varchar(9),NOT NULL,"Accession number for a microRNA. This unique identifier is used to map microRNA sequences and annotations within the database, ensuring consistency and traceability across related datasets",mirna
+mirna_id,varchar(40),NOT NULL,This is the mature name of the microRNA,mirna
+previous_mirna_id,text,NOT NULL,This is the old mature name of the microRNA,mirna
+sequence,blob,None,Full sequence of the microRNA,mirna
+auto_mirna,,,Auto-incremented miRNA ID,mirna_chromosome_build
+contig_end,bigint,None,"This column specifies the ending base pair position of the microRNA on the chromosome. It marks where the sequence ends, also measured in base pairs, and complements the contig_start to define the full genomic range of the microRNA",mirna_chromosome_build
+contig_start,bigint,None," indicates the starting base pair position of the microRNA on the chromosome. It provides the genomic location from which the microRNA sequence begins, measured in base pairs from the 5' end of the sense strand",mirna_chromosome_build
+strand,char(2),None,"indicating the direction of transcription, + or -",mirna_chromosome_build
+xsome,varchar(20),None,"pecifies the chromosome where the microRNA is located. It maps microRNA identifiers to their corresponding chromosomes, which may include multiple chromosomes for some microRNAs",mirna_chromosome_build
+auto_mirna,int,NOT NULL,Auto-incremented miRNA ID,mirna_context
+number,int,None,The exon or intron number where the miRNA resides.,mirna_context
+overlap_sense,char(2),None,Indicates the strand orientation of the overlap; typically '+' for sense or '-' for antisense.,mirna_context
+overlap_type,varchar(20),None,"Specifies the genomic feature where the miRNA is located, such as exon, intron, 5UTR, or 3UTR.",mirna_context
+transcript_id,varchar(50),None,"The Ensembl transcript ID (e.g., ENST00000335137) associated with the miRNA.",mirna_context
+transcript_name,varchar(50),None,"The name of the transcript, which may correspond to a gene symbol or other identifier.",mirna_context
+transcript_source,varchar(50),None,"The source of the transcript annotation, such as HGNC or miRBase",mirna_context
+auto_db,int,None,Internal ID referring to the external database links to mirna_database_url,mirna_database_links
+auto_mirna,int,NOT NULL,Auto-incremented miRNA ID,mirna_database_links
+display_name,tinytext,NOT NULL,"Conmon name of the mirna, for example let-7 or mir-1",mirna_database_links
+link,tinytext,NOT NULL,Not sure...,mirna_database_links
+auto_db,int,NOT NULL,A unique internal ID for each external database,mirna_database_url
+display_name,tinytext,NOT NULL,"A user-friendly name of the external database (e.g., ""Ensembl"", ""HGNC"", etc.).",mirna_database_url
+url,tinytext,NOT NULL,The actual link to the databases,mirna_database_url
+auto_lit,int(10) unsigned,"NOT NULL, DEFAULT '0'",Literature ID,mirna_literature_references
+auto_mirna,int(10) unsigned,"NOT NULL, DEFAULT '0'",miRNA ID,mirna_literature_references
+comment,mediumtext,None,Comments,mirna_literature_references
+order_added,tinyint(4),DEFAULT NULL,Order Added,mirna_literature_references
+auto_mature,int(10) unsigned,"NOT NULL, AUTO_INCREMENT",Auto -incremental Mature miRNA ID of mirBase,mirna_mature
+dead_flag,int(2),NOT NULL,Flag indicating if miRNA is dead,mirna_mature
+evidence,mediumtext,None,Evidence supporting miRNA,mirna_mature
+experiment,mediumtext,None,Experimental data,mirna_mature
+mature_acc,varchar(20),"NOT NULL, DEFAULT ''",Accession number of mature miRNA,mirna_mature
+mature_name,varchar(40),"NOT NULL, DEFAULT ''",Name of the mature miRNA,mirna_mature
+previous_mature_id,text,NOT NULL,Previous IDs of mature miRNA,mirna_mature
+similarity,mediumtext,None,Similarity data,mirna_mature
+auto_mature,int(10) unsigned,"NOT NULL, DEFAULT '0'",Auto -incremental Mature miRNA ID of mirBase,mirna_pre_mature
+auto_mirna,int(10) unsigned,"NOT NULL, DEFAULT '0'",Precursor miRNA ID,mirna_pre_mature
+mature_from,varchar(4),DEFAULT NULL,Start of mature miRNA,mirna_pre_mature
+mature_to,varchar(4),DEFAULT NULL,End of mature miRNA,mirna_pre_mature
+auto_prefam,int(10),"NOT NULL, AUTO_INCREMENT",Precursor family ID,mirna_prefam
+description,text,None,Description of family,mirna_prefam
+prefam_acc,varchar(15),"NOT NULL, DEFAULT ''",Precursor family accession,mirna_prefam
+prefam_id,varchar(40),"NOT NULL, DEFAULT ''",Precursor family ID,mirna_prefam
+auto_mature,varchar(20),"NOT NULL, DEFAULT ''","Mature mirna name, eg hsa-mir-1-5p",mirna_seeds
+probability,varchar(20),"NOT NULL, DEFAULT ''","This is NOT the probabiliy, is the species ID from TargetScan",mirna_seeds
+seed,varchar(20),"NOT NULL, DEFAULT ''",Seed sequence,mirna_seeds
+auto_id,bigint(20),"NOT NULL, AUTO_INCREMENT",Species ID,mirna_species
+division,varchar(10),DEFAULT NULL,Division of organism,mirna_species
+ensembl_db,varchar(50),DEFAULT NULL,Ensembl database identifier,mirna_species
+genome_accession,varchar(50),DEFAULT '',Genome accession number,mirna_species
+genome_assembly,varchar(50),DEFAULT '',Genome assembly version,mirna_species
+name,varchar(100),DEFAULT NULL,Name of the species,mirna_species
+organism,varchar(10),DEFAULT NULL,Organism name,mirna_species
+taxon_id,bigint(20),DEFAULT NULL,Taxonomy ID,mirna_species
+taxonomy,varchar(200),DEFAULT NULL,Taxonomy description,mirna_species
+mirna,varchar(30),NOT NULL,mature microRNA,mirna_tissues
+organ,varchar(30),None,Organ in question,mirna_tissues
+organ_TSI,float,None,Organ Tissue Specificity Index (TSI) is a measure of how specific the expression of a non-coding RNA (ncRNA) is to a particular tissue or organ system.,mirna_tissues
+source,varchar(30),None,Where was the data downloaded from,mirna_tissues
+system,varchar(30),NOT NULL,Sytem in question,mirna_tissues
+system_TSI,float,None,Tissue Specificity Index (TSI) is a measure of how specific the expression of a non-coding RNA (ncRNA) is to a particular tissue or organ system,mirna_tissues

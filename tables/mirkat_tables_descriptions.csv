@@ -1,0 +1,21 @@
+Table,Main Source,Primary Key,Key,Description
+confidence_score,mirBase,-,-,evaluates the reliability of microRNA annotations based on experimental and structural evidence
+dead_mirna,mirBase,-,-,annotation indicating microRNA entries that are no longer considered valid or active in the database
+literature_references,mirBase,-,-,pertain to the primary research articles and associated PubMed IDs (PMIDs) that document the discovery and experimental validation of microRNA (miRNA) entries
+mature_database_links,mirBase,-,-," cross-references connecting mature microRNAs (miRNAs) to external biological databases, enabling comprehensive annotation and functional analysis."
+mature_database_url,mirBase,-,-,refers to the web-based access point for retrieving information about mature microRNA sequences
+mirna,mirBase,auto_mirna,-,The mirna in their initial state. (the full sequence is here)
+mirna_2_prefam,mirBase,"auto_mirna, auto_prefam",-,"maps individual microRNAs to their precursor families, which group evolutionarily related miRNA genes based on sequence/structure similarities."
+mirna_chromosome_build,mirBase,-,auto_mirna,refers to the genome assembly version used to map microRNA (miRNA) genomic coordinates. This ensures accurate chromosomal localization and cross-referencing with other genomic annotations
+mirna_context,mirBase,-,auto_mirna,"refers to the genomic and functional features surrounding microRNA (miRNA) genes, which influence their expression, regulation, and evolutionary conservation."
+mirna_database_links,mirBase,-,"auto_mirna, link","refer to cross-references connecting microRNA (miRNA) entries to external biological databases, enabling integration with broader genomic, functional, and disease-related resources."
+mirna_database_url,mirBase,auto_db,-,refers to the structured access points for retrieving microRNA (miRNA) data programmatically or via direct web links
+mirna_literature_references,mirBase,-,-,denote the curated links between microRNA entries and their foundational research publications. 
+mirna_mature,mirBase,auto_mature,"mature_name, mature_acc",This is the mirna after the hairpin cut. It has the long name (cel-let-7-5p) and the evidence of their existence.
+mirna_pre_mature,mirBase,-,"auto_mirna, auto_mature",From where to where the mirna mature is in the mirna (auto_mirna) sequence
+mirna_prefam,mirBase,auto_prefam,"prefam_acc, prefam_id",The family of the mirna
+mirna_species,mirBase,auto_id,organism,The organism species. 
+mirna_tissues,mirnaTissueAtlas2,auto_id,"mirna, organ, system",The expression of one mirna on a Tissue at system and organ level.
+gene_mirna,mirTarBase and miRDB,-,"mirna_mature, mrna",This is te table of the miRNAs (mature) and their mRNA (gene) target.
+mirna_seeds,TargetScan,-,auto_mature,This holds the seed of the mirna mature
+gene_names,genome-mysql.cse.ucsc.edu,-,RefSeq_mRNA,This holds the gene name in ref seq mrna and gene symbol
