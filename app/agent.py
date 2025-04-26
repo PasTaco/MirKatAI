@@ -77,7 +77,6 @@ mirkat_tables_desctiption = pd.read_csv('tables/mirkat_tables_descriptions.csv')
 llm_master = ChatGoogleGenerativeAI(model=LLM)
 
 
-
 ###### define instructions for nodes
 
 ### master node
@@ -109,7 +108,6 @@ ORIGINAL_MIRNA_SYSINT_CONTENT_MESSAGE = SystemMessage(ORIGINAL_MIRNA_SYSINT_CONT
 MIRNA_ASSISTANT_SYSTEM_MESSAGE = SystemMessage(content=MIRNA_ASSISTANT_SYSINT_CONTENT) # Create SystemMessage object
 
 WELCOME_MSG = "Hello there. Please ask me your microRNA related questions. I have access to miRKat database and general web search."
-
 
 ### sql node
 
@@ -663,6 +661,7 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
          # If the content is *only* the keyword, maybe add a placeholder?
          #if not state['messages'][-1].content:
          x = state['messages'][-2].content#.candidates[0].content.parts[0].text
+         print(f"This is the message puto!!!{x}")
          #print (f"--- The messages directly was: {x}")
          answer = llm_master.invoke(x) #"Okay, let me answer that." # Or similar
          state['messages'][-1].content = re.sub(r'[*_`~#\[\]()]', '', answer.content)

@@ -8,21 +8,25 @@ authors = [
 ]
 dependencies = [
     "langchain-google-vertexai~=2.0.7",
-    "langchain~=0.3.14",
-    "langgraph~=0.2.63",
-    "langchain-google-vertexai~=2.0.7",
-    "langchain~=0.3.14",
-    "langchain-community~=0.3.17",
+    'langgraph==0.3.21',
     "langchain-openai~=0.3.5",
     "opentelemetry-exporter-gcp-trace~=1.9.0",
     "langchain-core~=0.3.9",
     "traceloop-sdk~=0.38.7",
     "google-cloud-logging~=3.11.4",
     "google-cloud-aiplatform[evaluation,agent-engines]~=1.88.0",
+    "langchain==0.3.24",
+    "langchain-community==0.3.22",
+    "langchain-core==0.3.56",
+    "langchain-google-genai==2.1.2",
+    "langchain-text-splitters==0.3.8",
     "mysql-connector-python",
     "python-dotenv",
-    "google-genai",
-    "langchain-google-genai==2.1.2"
+    "google-genai==0.8.0",
+    "langchain-google-genai==2.1.2",
+    "langgraph-checkpoint==2.0.24",
+    "langgraph-prebuilt==0.1.7",
+    "langgraph-sdk==0.1.63"
 
 ]
 
