@@ -421,20 +421,20 @@ class GraphState(TypedDict):
 def human_node(state: GraphState) -> GraphState:
     """Display the last model message to the user, and rec
     eive the user's input."""
-    #print("\n--- ENTERING: human_node ---")
+    print("\n--- ENTERING: human_node ---")
     last_msg = state["messages"][-1]
     answer = state["answer"]
     support = None
     chunks = None
-    #print(F"----- ANSWER: {answer} -------")
+    print(F"----- ANSWER: {answer} -------")
     if isinstance(last_msg, AIMessage) or isinstance(last_msg, GenerateContentResponse):
         if answer:
-            #print("Assistant:", answer)
+            print("Assistant:", answer)
             display(Markdown(answer))
             state["answer"] = None
             #print()
         else:
-            #print("Assistant:", last_msg.content)
+            print("Assistant:", last_msg.content)
             display(Markdown(last_msg.content))
     print("="*30)
 
@@ -636,7 +636,6 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
         return END # Or raise error
 
     last_message = messages[-1]
-    
     if not isinstance(last_message, AIMessage) :
         #print(f"--- Routing Warning: Expected AIMessage, got {type(last_message)}. Routing to Human. ---")
         return HUMAN_NODE
@@ -655,19 +654,22 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
         #print("--- Routing: Master Router to END ---")
         return END
     elif "***ANSWER_DIRECTLY***" in content:
+        content = content.replace("***ANSWER_DIRECTLY***", "")
+        print(f"--- The answer directly was: {content}")
          #print("--- Routing: Master Router to Human (Direct Answer) ---")
          # Remove the keyword itself before showing to human
-         state['messages'][-1].content = content.replace("***ANSWER_DIRECTLY***", "").strip()
-         # If the content is *only* the keyword, maybe add a placeholder?
-         #if not state['messages'][-1].content:
-         x = state['messages'][-2].content#.candidates[0].content.parts[0].text
-         print(f"This is the message puto!!!{x}")
-         #print (f"--- The messages directly was: {x}")
-         answer = llm_master.invoke(x) #"Okay, let me answer that." # Or similar
-         state['messages'][-1].content = re.sub(r'[*_`~#\[\]()]', '', answer.content)
-         #print (f"--- The answer directly was: {answer}")
-         state['answer'] = answer#.response.candidates[0].content.parts[0].text
-         return HUMAN_NODE
+        #  state['messages'][-1].content = content.replace("***ANSWER_DIRECTLY***", "").strip()
+        #  # If the content is *only* the keyword, maybe add a placeholder?
+        #  #if not state['messages'][-1].content:
+        #  x = state['messages'][-2].content[0]['text']
+        #  print(f"\n\n\n\nThis is the message puto!!!{x}\n\n\n\n")
+        #  #print (f"--- The messages directly was: {x}")
+        #  answer = llm_master.invoke(x) #"Okay, let me answer that." # Or similar
+        state['messages'][-1].content = str(content)
+        #  #print (f"--- The answer directly was: {answer}")
+        state['answer'] = str(content)#.response.candidates[0].content.parts[0].text
+        print(f"\n\n\n BEFORE CALLING HUMAN NODE \n\n\n\n")
+        return HUMAN_NODE
     elif "***PLOT***" in content:
         #print("---- Routing to plot node ----")
         return PLOT_NODE
