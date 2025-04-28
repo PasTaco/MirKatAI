@@ -11,7 +11,6 @@ dependencies = [
     'langgraph==0.3.21',
     "langchain-openai~=0.3.5",
     "opentelemetry-exporter-gcp-trace~=1.9.0",
-    "langchain-core~=0.3.9",
     "traceloop-sdk~=0.38.7",
     "google-cloud-logging~=3.11.4",
     "google-cloud-aiplatform[evaluation,agent-engines]~=1.88.0",
@@ -23,7 +22,6 @@ dependencies = [
     "mysql-connector-python",
     "python-dotenv",
     "google-genai==0.8.0",
-    "langchain-google-genai==2.1.2",
     "langgraph-checkpoint==2.0.24",
     "langgraph-prebuilt==0.1.7",
     "langgraph-sdk==0.1.63"
