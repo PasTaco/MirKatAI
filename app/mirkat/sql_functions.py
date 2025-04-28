@@ -33,13 +33,24 @@ class MySqlConnection:
 
 
 class DBTools:
-    @staticmethod
-    def list_tables(db_conn) -> list[str]:
+    def __init__(self, db_conn, mirkat_tables_desctiption, mirkat_columns_desctiption):
+        """
+        Initialize the DBTools with a database connection and table descriptions.
+        :param db_conn: A MySQL database connection object.
+        :param mirkat_tables_desctiption: DataFrame containing table descriptions.
+        :param mirkat_columns_desctiption: DataFrame containing column descriptions.
+        """
+        self.db_conn = db_conn
+        self.mirkat_tables_desctiption = mirkat_tables_desctiption
+        self.mirkat_columns_desctiption = mirkat_columns_desctiption
+
+
+    def list_tables(self) -> list[str]:
         """Retrieve the names of all tables in the database."""
         # Include print logging statements so you can see when functions are being called.
         print(' - DB CALL: list_tables()')
 
-        cursor = db_conn.cursor()
+        cursor = self.db_conn.cursor()
 
         # Fetch the table names.
         cursor.execute("SHOW TABLES;")
@@ -47,8 +58,7 @@ class DBTools:
         tables = cursor.fetchall()
         return [t[0] for t in tables]
 
-    @staticmethod
-    def get_table_schema(db_conn, table_name: str) -> list[tuple[str, str]]:
+    def get_table_schema(self, table_name: str) -> list[tuple[str, str]]:
         """Look up the table schema.
 
         Returns:
@@ -56,7 +66,7 @@ class DBTools:
         """
         print(f' - DB CALL: describe_table({table_name})')
 
-        cursor = db_conn.cursor()
+        cursor = self.db_conn.cursor()
 
         cursor.execute(f"DESCRIBE `{table_name}`;")
         
@@ -64,8 +74,7 @@ class DBTools:
         # MySQL returns (Field, Type, Null, Key, Default, Extra), so we extract the first two columns.
         return [(col[0], col[1]) for col in schema]
 
-    @staticmethod
-    def describe_columns(mirkat_columns_desctiption, table_name:str) -> list[tuple[str,str]]:
+    def describe_columns(self, table_name:str) -> list[tuple[str,str]]:
         """ Looks for the columns in the table table_name and gets the 
             biological description of the table
             Args:
@@ -74,37 +83,35 @@ class DBTools:
                 list[tuple[str,str]]: List of tuples containing column names and their descriptions
         """
         # Check if the table name exists in the DataFrame
-        if table_name not in mirkat_columns_desctiption['Table'].values:
+        if table_name not in self.mirkat_columns_desctiption['Table'].values:
             print(f"Error: Table '{table_name}' not found.")
             return []
 
         # Filter the DataFrame for the specified table name
-        filtered_df = mirkat_columns_desctiption[mirkat_columns_desctiption['Table'] == table_name]
+        filtered_df = self.mirkat_columns_desctiption[mirkat_columns_desctiption['Table'] == table_name]
 
         # Extract column names and descriptions
         columns = list(zip(filtered_df['Column Name'], filtered_df['Description']))
         
         return columns
 
-    @staticmethod
-    def describe_tabes(mirkat_tables_desctiption) -> list[tuple[str,str]]:
+    def describe_tabes(self) -> list[tuple[str,str]]:
         """ Looks for the biological description 
         and returns the description of all the tables
         """
         # Extract table names and descriptions
-        tables = list(zip(mirkat_tables_desctiption['Table'], mirkat_tables_desctiption['Description']))
+        tables = list(zip(self.mirkat_tables_desctiption['Table'], self.mirkat_tables_desctiption['Description']))
         
         return tables
 
-    @staticmethod
-    def execute_query(db_conn, sql: str, query_name:str) -> list[list[str]]:
+    def execute_query(self, sql: str, query_name:str) -> list[list[str]]:
         """Execute an SQL statement, returning the results.
             params sql: is the formated mySQL query
             params query_name: name of the query only alfanumeric characters.
             """
         print(f' - DB CALL: execute_query({sql})')
 
-        cursor = db_conn.cursor()
+        cursor = self.db_conn.cursor()
 
         cursor.execute(sql)
         results = cursor.fetchall()

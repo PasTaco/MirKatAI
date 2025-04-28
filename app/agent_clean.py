@@ -17,8 +17,8 @@ import mysql.connector
 from mysql.connector import errorcode # Specific import from the same library
 from pprint import pformat
 import collections
-from mirkat.instructions import Instructions
-from mirkat.sql_functions import (
+from app.mirkat.instructions import Instructions
+from app.mirkat.sql_functions import (
     MySqlConnection,
     DBTools
 )
@@ -91,7 +91,7 @@ db_conn = mysql_connection.connect_sql()
 
 
 # Assume db_conn, mirkat_columns_description, and mirkat_tables_description are available
-db_tools_instance = DBTools()
+db_tools_instance = DBTools(db_conn, mirkat_tables_desctiption, mirkat_columns_desctiption)
 
 # OR you can make a list of methods if you want:
 db_tools = [
