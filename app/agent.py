@@ -141,10 +141,10 @@ human query: What are the differences in targets of human mir 106a and mir-106b 
 sql query:  SELECT gm.mrna, gm.mirna_mature, gm.source FROM gene_mirna gm WHERE gm.mirna_mature IN ('hsa-miR-106a-5p', 'hsa-miR-106b-5p') 
 
 human query: What are the seeds of the microRNAs that expressed in muscle and how many of those mirnas have said seed?
-sql_query: execute_query(SELECT ms.seed, COUNT(DISTINCT mt.mirna) FROM mirna_seeds ms JOIN mirna_mature mm ON ms.auto_mature = mm.mature_name JOIN mirna_pre_mature mpm ON mm.auto_mature = mpm.auto_mature JOIN mirna m ON mpm.auto_mirna = m.auto_mirna JOIN mirna_tissues mt ON m.mirna_ID = mt.mirna WHERE mt.organ = 'muscle' GROUP BY ms.seed
+sql_query: SELECT ms.seed, COUNT(DISTINCT mt.mirna) FROM mirna_seeds ms JOIN mirna_mature mm ON ms.auto_mature = mm.mature_name JOIN mirna_pre_mature mpm ON mm.auto_mature = mpm.auto_mature JOIN mirna m ON mpm.auto_mirna = m.auto_mirna JOIN mirna_tissues mt ON m.mirna_ID = mt.mirna WHERE mt.organ = 'muscle' GROUP BY ms.seed
 
 
-
+After getting the SQL query you will always execute execute_query
 """
 
 
@@ -254,6 +254,8 @@ def execute_query(sql: str, query_name:str) -> list[list[str]]:
 
     cursor.execute(sql)
     results = cursor.fetchall()
+    print(f"Results from SQL are: {results}")
+    import csv
     with open(f"{query_name}.tsv", "w", newline="") as f:
         writer = csv.writer(f, delimiter="\t")
         writer.writerows(results) 
@@ -480,42 +482,106 @@ def chatbot_with_tools(state: GraphState) -> GraphState:
 
     # Update state
     state = state | {
-        "messages": response.content , # Add the router's decision/response
+        "messages": AIMessage(content=response.content) , # Add the router's decision/response
         "answer": answer, # Update answer with the router's response
         "finished": state.get("finished", False), # Use .get for safety
     }
     return state
+    messages =  state['messages']
+    if not messages:
+        print("--- Routing Error: No messages found in route_chatbot_decision ---")
+        return END # Or raise error
+
+    last_message = messages
+    if not isinstance(last_message, AIMessage) :
+        print(f"--- Routing Warning: Expected AIMessage, got {type(last_message)}. Routing to Human. ---")
+        return HUMAN_NODE
+        
+    content = last_message.content.strip()
+    print(f"--- checking the answer: {content} ---")
+    # Check for routing keywords first
+    if "***ROUTE_TO_SQL***" in content:
+        print("--- Routing: Master Router to SQL Processor ---")
+        return SQL_NODE
+    elif "***ROUTE_TO_LITERATURE***" in content:
+        #print("--- Routing: Master Router to Literature Searcher ---")
+        # state['messages'][-1].content = "Okay, I need to search the literature for that."
+        return LITERATURE_NODE
+    elif "***FINISH***" in content or state.get("finished"): # Check flag too
+        #print("--- Routing: Master Router to END ---")
+        return END
+    elif "***ANSWER_DIRECTLY***" in content:
+        content = content.replace("***ANSWER_DIRECTLY***", "")
+        print(f"--- The answer directly was: {content}")
+         #print("--- Routing: Master Router to Human (Direct Answer) ---")
+         # Remove the keyword itself before showing to human
+        #  state['messages'][-1].content = content.replace("***ANSWER_DIRECTLY***", "").strip()
+        #  # If the content is *only* the keyword, maybe add a placeholder?
+        #  #if not state['messages'][-1].content:
+        #  x = state['messages'][-2].content[0]['text']
+        #  print(f"\n\n\n\nThis is the message puto!!!{x}\n\n\n\n")
+        #  #print (f"--- The messages directly was: {x}")
+        #  answer = llm_master.invoke(x) #"Okay, let me answer that." # Or similar
+        state['messages'].content = str(content)
+        #  #print (f"--- The answer directly was: {answer}")
+        state['answer'] = str(content)#.response.candidates[0].content.parts[0].text
+        print(f"\n\n\n BEFORE CALLING HUMAN NODE \n\n\n\n")
+        return HUMAN_NODE
+    elif "***PLOT***" in content:
+        #print("---- Routing to plot node ----")
+        return PLOT_NODE
+    else:
+         # Assume it's a direct answer or clarification question if no keyword is found
+         #print("--- Routing: Master Router to Human (Direct Answer) ---")
+         # Remove potential keywords just in case they were missed but shouldn't be shown
+         state['messages'].content = content.replace("***ROUTE_TO_SQL***", "").replace("***ROUTE_TO_LITERATURE***", "").replace("***FINISH***", "").replace("***ANSWER_DIRECTLY***", "").strip()
+         print(f"\n\n\n BEFORE CALLING HUMAN NODE  (2) \n\n\n\n")
+         return HUMAN_NODE
 
 def sql_processor_node(state: GraphState) -> GraphState:
     """The sql llm that will check for the sql questions and get a json file in response."""
     print("--- Calling SQL Processor Node ---")
-    messages = [state['messages']]
+    messages = state['messages']
+    # pint type message
+    print("The type of the message is: ", type(messages))
+    # check if it is GenerateContentResponse
+    if isinstance(messages, GenerateContentResponse):
+        print("The message is GenerateContentResponse, changing to AIMessage")
+        messages = AIMessage(content=messages.candidates[0].content)
+    elif isinstance(messages, str):
+        print("The message is str, changing to AIMessage")
+        messages = AIMessage(content=messages)
     if not messages:
         # Should ideally not happen if routing is correct
         #print("Warning: SQL processor called with no messages.")
         # Return unchanged state or add an error message? For now, return unchanged.
         return state
-    #print("The message sent to the SQL node is: ", messages)
-    response = chat.send_message(messages)
-
+    print("The message sent to the SQL node is: ", messages)
+    response = chat.send_message(messages.content)
+    print(f"--- SQL Processor LLM Response: {response} ---")
+    print("Run get_queries")
     queries = get_queries(response.automatic_function_calling_history)
     #handle_response(response)
     #response = sql_llm_with_db_tools.invoke([SQL_SYSTEM_INSTRUCTION] + messages)
-    #print(f"--- SQL Processor LLM Response: {response} ---")
+    print("Finish to get queries")
     
     
     new_answer = state.get("answer", "")
     
     if isinstance(response, AIMessage) and response.content and not response.tool_calls:
-         new_answer = response.content # Update answer if it's a direct text response
+        print("The response is AIMessage")
+        new_answer = response.content # Update answer if it's a direct text response
     elif isinstance(response, GenerateContentResponse):
+        print("The response is GenerateContentResponse")
         new_answer = response.text
+        print( f"--- the type of the response is: {type(new_answer)}")
     elif isinstance(response, str):
+        print("The response is str")
         new_answer = response
     new_messages = messages + [AIMessage(content=new_answer)]
     #print(f"--- Answer from SQL Processor LLM Response: {new_answer} ---")
     return {
-        "messages": response.content,
+        "messages": AIMessage(content="This was the answer from SQL node, please format and give to the user: "+response.text), # Add the router's decision/response
         "table": queries, # Use .get for safety
         "answer": new_answer, # Return the potentially updated answer
         "finished": state.get("finished", False), # Use .get for safety
@@ -569,7 +635,6 @@ def literature_search_node(state: GraphState) -> GraphState:
         "bibliography": bibliography,
         "research_queries": research_queries,
         "finished": state["finished"]}
-
 
 def plot_node(state:GraphState) -> GraphState:
     messages = state['messages'][-1].content
@@ -635,7 +700,7 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
     Inspects the last message from the main chatbot (`chatbot_with_tools`)
     and decides where to route the conversation next.
     """
-    #print("\n--- ROUTING: route_chatbot_decision ---")
+    print("\n--- ROUTING: route_chatbot_decision ---")
     messages: List[BaseMessage] = state['messages']
     if not messages:
         #print("--- Routing Error: No messages found in route_chatbot_decision ---")
@@ -643,10 +708,11 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
 
     last_message = messages
     if not isinstance(last_message, AIMessage) :
-        #print(f"--- Routing Warning: Expected AIMessage, got {type(last_message)}. Routing to Human. ---")
-        return HUMAN_NODE
-        
-    content = last_message.content.strip()
+        print(f"--- Routing Warning: Expected AIMessage, got {type(last_message)}. Routing to Human. ---")
+        #return HUMAN_NODE
+        content = last_message
+    else:
+        content = last_message.content.strip()
     
     # Check for routing keywords first
     if "***ROUTE_TO_SQL***" in content:
@@ -688,19 +754,19 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
          return HUMAN_NODE
 
 # Router 3: After a Specialist Processor Node (`sql_processor_node`, `literature_search_node`)
-def route_processor_output(state: GraphState) -> Literal["human_node", "__end__"]:
+def route_processor_output(state: GraphState) -> Literal["chatbot_router","human_node", "__end__"]:
     """
     Inspects the last message from a specialist processor node.
     Routes to 'tools' if a tool call was made (e.g., query_database, ground_search).
     Routes to 'human_node' if a final synthesized answer was provided.
     """
-    #print("\n--- ROUTING: route_processor_output ---")
+    print("\n--- ROUTING: route_processor_output ---")
     messages: List[BaseMessage] = state['messages']
     if not messages:
         #print("--- Routing Error: No messages found in route_processor_output ---")
         return END
 
-    last_message = messages[-1]
+    last_message = messages
 
     #if not isinstance(last_message, AIMessage):
     #    print(f"--- Routing Warning: Expected AIMessage from processor, got {type(last_message)}. Routing to Human. ---")
@@ -794,6 +860,7 @@ workflow.add_conditional_edges(
     route_processor_output, # Function to decide based on SQL processor output
     {
         TOOL_NODE: TOOL_NODE,   # Route to execute SQL tools (query_database)
+        CHATBOT_NODE: CHATBOT_NODE, # Route to main chatbot
         HUMAN_NODE: HUMAN_NODE  # Route to show final SQL answer
     }
 )
