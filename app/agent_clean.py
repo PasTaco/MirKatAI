@@ -22,6 +22,9 @@ from app.mirkat.sql_functions import (
     MySqlConnection,
     DBTools
 )
+from mirkat.literature_functions import LiteratureTools
+from mirkat.plot_functions import PlotFunctons
+
 # langchain and google ai specific libraries
 from google.genai.types import GenerateContentResponse
 from google.genai import types
@@ -37,6 +40,7 @@ from langchain_core.messages import ( # Grouped message types
 from langchain_core.tools import tool # Decorator for creating LangChain tools
 from langgraph.graph import END, StateGraph # Core graph builder and end state marker
 from langgraph.prebuilt import ToolNode   
+import google.ai.generativelanguage as genai_types
 
 ## load env variables and set up gemini API key:
 
@@ -104,58 +108,6 @@ db_tools = [
 
 
 
-
-
-#### functions for literature search
-
-# literature search node
-import google.ai.generativelanguage as genai_types
-from google.genai import types
-
-def process_chunk(chunk,n):
-    title=chunk.web.title
-    uri=chunk.web.uri
-    reference=f"""
-{n}. [{title}]({uri})"""
-    return reference
-
-def create_bibliography(chunks):
-    bibliography=""
-    if chunks is not None:
-        for i,chunk in enumerate(chunks):
-            bibliography = bibliography + process_chunk(chunk,i+1)
-    return bibliography
-
-
-def process_indices(indices,chunks):
-    indices_text=""
-    for i,indice in enumerate(indices):
-        uri=chunks[indice].web.uri
-        indices_text = indices_text + f"[{indice+1}]({uri})"
-        if i < len(indices)-1:
-            indices_text = indices_text +","
-    indices_text= f"[{indices_text}]"
-    return indices_text
-
-
-def process_text_ref(support, chunks):
-    indices = support.grounding_chunk_indices
-    text = support.segment.text
-    return text,text + process_indices(indices, chunks)
-
-
-def process_references(answer, supports,chunks):
-    if supports is not None:
-        for support in supports:
-            text,ref=process_text_ref(support,chunks)
-            answer=answer.replace(text,ref)
-    return answer
-
-def process_paragraph(answer, supports, chunks):
-    answer=process_references(answer,supports,chunks)
-    bibliography=create_bibliography(chunks)
-    paragraph = f"**Answer**\n{answer}\n\n**Bibliography**\n{bibliography}"
-    return paragraph
 
 
 
@@ -338,8 +290,9 @@ def sql_processor_node(state: GraphState) -> GraphState:
         return state
     #print("The message sent to the SQL node is: ", messages)
     response = chat.send_message(messages)
-
-    queries = get_queries(response.automatic_function_calling_history)
+    callings = response.automatic_function_calling_history
+    plotting_tools_instance = PlotFunctons(callings, '')
+    queries = plotting_tools_instance.get_queries()
     #handle_response(response)
     #response = sql_llm_with_db_tools.invoke([SQL_SYSTEM_INSTRUCTION] + messages)
     #print(f"--- SQL Processor LLM Response: {response} ---")
@@ -394,9 +347,10 @@ def literature_search_node(state: GraphState) -> GraphState:
     chunks = response.candidates[0].grounding_metadata.grounding_chunks
     supports = response.candidates[0].grounding_metadata.grounding_supports
     research_queries=response.candidates[0].grounding_metadata.web_search_queries
+    lit_tools_instance = LiteratureTools(chunks, supports, answer)
 
-    answer=process_references(answer,supports,chunks)
-    bibliography=create_bibliography(chunks)
+    answer=lit_tools_instance.process_references()
+    bibliography=lit_tools_instance.create_bibliography()
 
 
     
@@ -417,7 +371,8 @@ def plot_node(state:GraphState) -> GraphState:
     queries = state['table']
 
     response_plot = plotter_model.send_message(str(queries) + messages)
-    handle_response(response_plot)
+    plotting_tools_instance = PlotFunctons('', response_plot)
+    plotting_tools_instance.handle_response()
     answer = ''
     for part in response.candidates[0].content.parts:
         if part.text is not None:
