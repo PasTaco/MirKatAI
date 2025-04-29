@@ -115,6 +115,7 @@ class DBTools:
 
         cursor.execute(sql)
         results = cursor.fetchall()
+        print(f"Results from SQL are: {results}")
         with open(f"{query_name}.tsv", "w", newline="") as f:
             writer = csv.writer(f, delimiter="\t")
             writer.writerows(results) 

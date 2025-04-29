@@ -216,7 +216,8 @@ def chatbot_with_tools(state: GraphState) -> GraphState:
 
     # Update state
     state = state | {
-        "messages": response.content , # Add the router's decision/response
+        #"messages": response.content , # Add the router's decision/response
+        "messages": AIMessage(content=response.content), # Add the router's decision/response
         "answer": answer, # Update answer with the router's response
         "finished": state.get("finished", False), # Use .get for safety
     }
@@ -225,14 +226,27 @@ def chatbot_with_tools(state: GraphState) -> GraphState:
 def sql_processor_node(state: GraphState) -> GraphState:
     """The sql llm that will check for the sql questions and get a json file in response."""
     print("--- Calling SQL Processor Node ---")
-    messages = [state['messages']]
+    messages = state['messages']
     if not messages:
         # Should ideally not happen if routing is correct
         #print("Warning: SQL processor called with no messages.")
         # Return unchanged state or add an error message? For now, return unchanged.
         return state
+
+    print("The type of the message is: ", type(messages))
+    # check if it is GenerateContentResponse
+    if isinstance(messages, GenerateContentResponse):
+        print("The message is GenerateContentResponse, changing to AIMessage")
+        messages = AIMessage(content=messages.candidates[0].content)
+    elif isinstance(messages, str):
+        print("The message is str, changing to AIMessage")
+        messages = AIMessage(content=messages)
+
     #print("The message sent to the SQL node is: ", messages)
-    response = chat.send_message(messages)
+    print("The message sent to the SQL node is: ", messages)
+    response = chat.send_message(messages.content)
+    print(f"--- SQL Processor LLM Response: {response} ---")
+    print("Run get_queries")
     callings = response.automatic_function_calling_history
     plotting_tools_instance = PlotFunctons(callings, '')
     queries = plotting_tools_instance.get_queries()
@@ -244,15 +258,19 @@ def sql_processor_node(state: GraphState) -> GraphState:
     new_answer = state.get("answer", "")
     
     if isinstance(response, AIMessage) and response.content and not response.tool_calls:
+         print("The response is AIMessage")
          new_answer = response.content # Update answer if it's a direct text response
     elif isinstance(response, GenerateContentResponse):
+        print("The response is GenerateContentResponse")
         new_answer = response.text
     elif isinstance(response, str):
+        print("The response is str")
         new_answer = response
     new_messages = messages + [AIMessage(content=new_answer)]
     #print(f"--- Answer from SQL Processor LLM Response: {new_answer} ---")
     return {
-        "messages": response.content,
+        #"messages": response.content,
+        "messages": AIMessage(content="This was the answer from SQL node, please format and give to the user: "+response.text), # Add the router's decision/response
         "table": queries, # Use .get for safety
         "answer": new_answer, # Return the potentially updated answer
         "finished": state.get("finished", False), # Use .get for safety
@@ -374,7 +392,7 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
     Inspects the last message from the main chatbot (`chatbot_with_tools`)
     and decides where to route the conversation next.
     """
-    #print("\n--- ROUTING: route_chatbot_decision ---")
+    print("\n--- ROUTING: route_chatbot_decision ---")
     messages: List[BaseMessage] = state['messages']
     if not messages:
         #print("--- Routing Error: No messages found in route_chatbot_decision ---")
@@ -382,10 +400,11 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
 
     last_message = messages
     if not isinstance(last_message, AIMessage) :
-        #print(f"--- Routing Warning: Expected AIMessage, got {type(last_message)}. Routing to Human. ---")
-        return HUMAN_NODE
-        
-    content = last_message.content.strip()
+        print(f"--- Routing Warning: Expected AIMessage, got {type(last_message)}. Routing to Human. ---")
+        #return HUMAN_NODE
+        content = last_message
+    else:
+        content = last_message.content.strip()
     
     # Check for routing keywords first
     if "***ROUTE_TO_SQL***" in content:
@@ -427,19 +446,19 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
          return HUMAN_NODE
 
 # Router 3: After a Specialist Processor Node (`sql_processor_node`, `literature_search_node`)
-def route_processor_output(state: GraphState) -> Literal["human_node", "__end__"]:
+def route_processor_output(state: GraphState) -> Literal["chatbot_router","human_node", "__end__"]:
     """
     Inspects the last message from a specialist processor node.
     Routes to 'tools' if a tool call was made (e.g., query_database, ground_search).
     Routes to 'human_node' if a final synthesized answer was provided.
     """
-    #print("\n--- ROUTING: route_processor_output ---")
+    print("\n--- ROUTING: route_processor_output ---")
     messages: List[BaseMessage] = state['messages']
     if not messages:
         #print("--- Routing Error: No messages found in route_processor_output ---")
         return END
 
-    last_message = messages[-1]
+    last_message = messages
 
     #if not isinstance(last_message, AIMessage):
     #    print(f"--- Routing Warning: Expected AIMessage from processor, got {type(last_message)}. Routing to Human. ---")
@@ -447,7 +466,7 @@ def route_processor_output(state: GraphState) -> Literal["human_node", "__end__"
     # Otherwise, the processor provided its final synthesized answer
     #else:
     #    print("--- Routing: Processor to Human ---")
-    return HUMAN_NODE
+    return CHATBOT_NODE
         
 def route_after_tools(state: GraphState) -> Literal["sql_processor_node", "literature_search_node","human_node"]:
     """ Routes back to the specialist node that originally called the tool OR to human if unclear."""
@@ -532,6 +551,7 @@ workflow.add_conditional_edges(
     SQL_NODE,
     route_processor_output, # Function to decide based on SQL processor output
     {
+        CHATBOT_NODE: CHATBOT_NODE, # Route to main chatbot (if needed)
         TOOL_NODE: TOOL_NODE,   # Route to execute SQL tools (query_database)
         HUMAN_NODE: HUMAN_NODE  # Route to show final SQL answer
     }
