@@ -13,6 +13,7 @@
 # limitations under the License.
 
 # mypy: disable-error-code="arg-type"
+import base64
 import json
 import uuid
 from collections.abc import Sequence
@@ -21,6 +22,8 @@ from typing import Any
 
 import streamlit as st
 from langchain_core.messages import HumanMessage
+from google.genai.types import GenerateContentResponse
+
 from streamlit_feedback import streamlit_feedback
 
 from frontend.side_bar import SideBar
@@ -71,10 +74,15 @@ def initialize_session_state() -> None:
 def display_messages() -> None:
     """Display all messages in the current chat session."""
     messages = st.session_state.user_chats[st.session_state["session_id"]]["messages"]
+    if "answer" in st.session_state.user_chats[st.session_state["session_id"]]:
+        answer = st.session_state.user_chats[st.session_state["session_id"]]["answer"]
+        print(f"---- Entering display_messages with answer: {answer}----")
     tool_calls_map = {}  # Map tool_call_id to tool call input
-
+    #print(f"---- Entering display_messages with messages: {messages}----")
     for i, message in enumerate(messages):
+        print(f"for enaumerate: {i} message: {message}")
         if message["type"] in ["ai", "human"] and message["content"]:
+            print("Display chat message")
             display_chat_message(message, i)
         elif message.get("tool_calls"):
             # Store each tool call input mapped by its ID
@@ -96,8 +104,25 @@ def display_messages() -> None:
 def display_chat_message(message: dict[str, Any], index: int) -> None:
     """Display a single chat message with edit, refresh, and delete options."""
     chat_message = st.chat_message(message["type"])
+    print(f"---- Entering display_chat_message with message: {message}----")
     with chat_message:
-        st.markdown(format_content(message["content"]), unsafe_allow_html=True)
+        message_content = message["content"]
+        plot = False
+        if "binary_image" in message_content:
+            plot = True
+            image_binary = message_content.split("binary_image")[1].strip()
+            message_content = message_content.split("binary_image")[0]
+        st.markdown(format_content(message_content), unsafe_allow_html=True)
+        if plot:
+            image_binary_bytes = base64.b64decode(image_binary)
+            print(f"---- Entering display_chat_message trying the image_binary:----")
+            st.image(
+                image_binary_bytes,
+                caption="Generated Image",
+                use_column_width=True,
+                output_format="auto",
+            )
+            plot = False
         col1, col2, col3 = st.columns([2, 2, 94])
         display_message_buttons(message, index, col1, col2, col3)
 
