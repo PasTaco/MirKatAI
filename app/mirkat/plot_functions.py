@@ -1,4 +1,5 @@
 import collections
+from pprint import pformat
 import streamlit as st
 
 class PlotFunctons:
@@ -31,7 +32,6 @@ class PlotFunctons:
                         query= ''
         return queries
 
-
     def handle_response(self, tool_impl=None):
         """Stream output and handle any tool calls during the session."""
         msg = self.msg.candidates[0].content
@@ -43,9 +43,16 @@ class PlotFunctons:
             elif code := part.executable_code:
                 #display(Markdown(
                 #    f'### Code\n```\n{code.code}\n```'))
-                exec(code.code) 
+                print(f"### Code\n```\n{code.code}\n```")
+                loc = {}
+                exec(code.code, globals(), loc)
+                return_workaround = loc['figure'] if 'figure' in loc else None
+                print(f"### Return\n```\n{return_workaround}\n```")
+                #exec(code.code) 
+                return return_workaround
             
             elif img := part.inline_data:
                 st.image(img.data) # TO  BE TESTED!
+
 
 

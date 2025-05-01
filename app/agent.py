@@ -36,7 +36,8 @@ from langchain_core.tools import tool # Decorator for creating LangChain tools
 from langgraph.graph import END, StateGraph # Core graph builder and end state marker
 from langgraph.prebuilt import ToolNode   
 import google.ai.generativelanguage as genai_types
-
+import base64
+import io
 ## load env variables and set up gemini API key:
 
 from dotenv import load_dotenv
@@ -170,8 +171,8 @@ def human_node(state: GraphState) -> GraphState:
             #display(Markdown(answer))
             state["answer"] = None
             #print()
-        else:
-            print("Assistant:", last_msg.content)
+        #else:
+            #print("Assistant:", last_msg.content)
             #display(Markdown(last_msg.content))
     print("="*30)
     return state
@@ -223,7 +224,7 @@ def chatbot_with_tools(state: GraphState) -> GraphState:
         "finished": state.get("finished", False), # Use .get for safety
     }
     return state
-
+SQL_QUERIES = {}
 def sql_processor_node(state: GraphState) -> GraphState:
     """The sql llm that will check for the sql questions and get a json file in response."""
     print("--- Calling SQL Processor Node ---")
@@ -251,6 +252,7 @@ def sql_processor_node(state: GraphState) -> GraphState:
     callings = response.automatic_function_calling_history
     plotting_tools_instance = PlotFunctons(callings, '')
     queries = plotting_tools_instance.get_queries()
+    SQL_QUERIES.update(queries)
     #handle_response(response)
     #response = sql_llm_with_db_tools.invoke([SQL_SYSTEM_INSTRUCTION] + messages)
     #print(f"--- SQL Processor LLM Response: {response} ---")
@@ -327,21 +329,38 @@ def literature_search_node(state: GraphState) -> GraphState:
         "research_queries": research_queries,
         "finished": state["finished"]}
 
-
+buf = io.BytesIO()
 def plot_node(state:GraphState) -> GraphState:
-    messages = state['messages'][-1].content
-    queries = state['table']
+    print("\n--- ENTERING: plot_node ---")
+    print(f"State values: {state.keys()}")
 
-    response_plot = plotter_model.send_message(str(queries) + messages)
+    messages = state['messages'].content
+    queries = SQL_QUERIES # state['table']
+
+    response_plot = plotter_model.send_message(str(queries) + "The code to plot, should save the final figure on variable figure." + messages)
     plotting_tools_instance = PlotFunctons('', response_plot)
-    plotting_tools_instance.handle_response()
+    response_plot.candidates[0].content
+    plot = plotting_tools_instance.handle_response()
+    
+    plot.savefig(buf, format='png') # Or another format like 'jpeg'
+    buf.seek(0)
+    image_bytes = base64.b64encode(buf.read()).decode('utf-8')
+    buf.close()
+    mime_type = "image/png"
+    image_part = genai_types.Part(
+        inline_data=genai_types.Blob(mime_type=mime_type, data=image_bytes))
     answer = ''
-    for part in response.candidates[0].content.parts:
+    for part in response_plot.candidates[0].content.parts:
         if part.text is not None:
             answer = answer + f"{part.text}\n"
+    print(f"--- Plot Node LLM Response: {answer} ---")
     
+    ai_message = AIMessage(content=image_part)
+    print("--Leaving plot node---")
     return {**state,
-           "messages":state["messages"] + [AIMessage(content=answer)]
+            "messages": ai_message,
+            "answer": answer
+           #"messages":state["messages"] + [AIMessage(content=answer)]
            }
     
     
@@ -515,7 +534,7 @@ workflow.add_node(CHATBOT_NODE, chatbot_with_tools)
 workflow.add_node(SQL_NODE, sql_processor_node)
 # workflow.add_node(LITERATURE_NODE, literature_search_node)
 workflow.add_node(TOOL_NODE, tool_node)
-# workflow.add_node(PLOT_NODE, plot_node)
+workflow.add_node(PLOT_NODE, plot_node)
 
 
 # --- Define Edges ---
@@ -542,7 +561,7 @@ workflow.add_conditional_edges(
         # LITERATURE_NODE: LITERATURE_NODE,   # Route to Literature searcher
         TOOL_NODE: TOOL_NODE,               # Route to execute chatbot's tools (get_menu)
         HUMAN_NODE: HUMAN_NODE,             # Route to show chatbot's direct answer
-        # PLOT_NODE: PLOT_NODE,              # Route to plot node
+        PLOT_NODE: PLOT_NODE,              # Route to plot node
         END: END                           # Route to end (though usually handled via human)
     }
 )
@@ -580,7 +599,7 @@ workflow.add_conditional_edges(
 # )
 
 
-# workflow.add_edge(PLOT_NODE, HUMAN_NODE)
+workflow.add_edge(PLOT_NODE, HUMAN_NODE)
 
 
 
@@ -599,52 +618,3 @@ config = {"recursion_limit": 100}
 
 agent = workflow.compile()
 
-
-
-# # 1. Define tools
-# @tool
-# def search(query: str) -> str:
-#     """Simulates a web search. Use it get information on weather"""
-#     if "sf" in query.lower() or "san francisco" in query.lower():
-#         return "It's 60 degrees and foggy."
-#     return "## Weather is:\nIt's 90 degrees and sunny."
-
-
-# tools = [search]
-
-# # 2. Set up the language model
-# llm = ChatVertexAI(
-#     model=LLM, location=LOCATION, temperature=0, max_tokens=1024, streaming=True
-# ).bind_tools(tools)
-
-
-# # 3. Define workflow components
-# def should_continue(state: MessagesState) -> str:
-#     """Determines whether to use tools or end the conversation."""
-#     last_message = state["messages"][-1]
-#     return "tools" if last_message.tool_calls else END
-
-
-# def call_model(state: MessagesState, config: RunnableConfig) -> dict[str, BaseMessage]:
-#     """Calls the language model and returns the response."""
-#     system_message = "You are a helpful AI assistant."
-#     messages_with_system = [{"type": "system", "content": system_message}] + state[
-#         "messages"
-#     ]
-#     # Forward the RunnableConfig object to ensure the agent is capable of streaming the response.
-#     response = llm.invoke(messages_with_system, config)
-#     return {"messages": response}
-
-
-# # 4. Create the workflow graph
-# workflow = StateGraph(MessagesState)
-# workflow.add_node("agent", call_model)
-# workflow.add_node("tools", ToolNode(tools))
-# workflow.set_entry_point("agent")
-
-# # 5. Define graph edges
-# workflow.add_conditional_edges("agent", should_continue)
-# workflow.add_edge("tools", "agent")
-
-# # 6. Compile the workflow
-# agent = workflow.compile()
