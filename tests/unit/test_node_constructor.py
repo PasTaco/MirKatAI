@@ -1,0 +1,246 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""
+You can add your unit tests here.
+This is where you test your business logic, including agent functionality,
+data processing, and other core components of your application.
+"""
+
+from app.mirkat.node_constructor import (
+    node,
+    HumanNode, 
+    ChatbotNode,
+    SQLNode,
+    PlotNode,
+    LiteratureNode
+
+)
+
+from langchain_core.messages import ( # Grouped message types
+    AIMessage
+)
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+from google.genai.client import Client
+from google.genai.chats import Chat
+
+from google.genai.types import GenerateContentResponse
+
+## Test class node:
+def test_create_node() -> None:
+    """Check that the node is created correctly."""
+    node_obj = node()
+    assert node_obj is not None
+    assert node_obj.llm is None
+    assert node_obj.instructions is None
+    assert node_obj.functions is None
+    assert node_obj.welcome is None
+    assert type(node_obj.client) == Client
+
+def test_create_node_with_llm() -> None:
+    """Check that the node is created correctly when setting a llm."""
+    node_obj = node(llm="flash")
+    assert node_obj is not None
+    assert node_obj.llm == "flash"
+
+def test_create_node_with_instructions() -> None:
+    """Check that the node is created correctly when setting a llm and instructions."""
+    node_obj = node(instructions="test")
+    assert node_obj is not None
+    assert node_obj.instructions == "test"
+
+def test_create_node_with_functions() -> None:
+    """Check that the node is created correctly when setting a llm, instructions and functions."""
+    node_obj = node(functions=["test"])
+    assert node_obj is not None
+    assert node_obj.functions == ["test"]
+
+
+def test_create_node_with_welcome() -> None:
+    """Check that the node is created correctly when setting a llm, instructions and functions."""
+    node_obj = node(welcome="hi")
+    assert node_obj is not None
+    assert node_obj.welcome == "hi"
+
+
+
+### test HumanNode:
+
+def test_human_node() -> None:
+    """Check that the node is created correctly."""
+    human_node = HumanNode()
+    assert human_node is not None
+    assert human_node.llm is None
+    assert human_node.instructions is None
+    assert human_node.functions is None
+    assert human_node.welcome is None
+    assert type(human_node.client) == Client
+
+
+def test_human_get_node_text_message() -> None:
+    """Check that the node correctly handle response"""
+    human_node = HumanNode()
+    state = {"messages":"hi","answer":None}
+    result = human_node.get_node(state)
+    # check messages is AIMessage
+    assert result['messages'] == "hi"
+    assert result['answer'] is None
+
+
+def test_human_get_node_ai_message_no_answer() -> None:
+    """Check that the node correctly handle response"""
+    human_node = HumanNode()
+    state = {"messages":AIMessage(content="hi"),"answer":None}
+    result = human_node.get_node(state)
+    # check messages is AIMessage
+    assert result['messages'].content == "hi"
+    assert type(result['messages']) == AIMessage
+    assert result['answer'] is None
+
+
+def test_human_get_node_GenerateContentResponse_no_answer() -> None:
+    """Check that the node correctly handle response"""
+    human_node = HumanNode()
+    state = {"messages":GenerateContentResponse(),"answer":None}
+    result = human_node.get_node(state)
+    # check messages is AIMessage
+    assert result['messages'].text is None
+    assert type(result['messages']) == GenerateContentResponse
+    assert result['answer'] is None
+
+
+
+def test_human_get_node_ai_message_with_answer() -> None:
+    """Check that the node correctly handle response"""
+    human_node = HumanNode()
+    state = {"messages":AIMessage(content="hi"),"answer":"hi"}
+    result = human_node.get_node(state)
+    # check messages is AIMessage
+    assert result['messages'].content == "hi"
+    assert type(result['messages']) == AIMessage
+    assert result['answer'] is None
+
+
+def test_human_get_node_GenerateContentResponse_with_answer() -> None:
+    """Check that the node correctly handle response"""
+    human_node = HumanNode()
+    state = {"messages":GenerateContentResponse(),"answer":"hi"}
+    result = human_node.get_node(state)
+    # check messages is AIMessage
+    assert result['messages'].text is None
+    assert type(result['messages']) == GenerateContentResponse
+    assert result['answer'] is None
+
+### Test class ChatbotNode:
+
+def test_chatbot_node() -> None:
+    """Check that the node is created correctly."""
+    chatbot = ChatbotNode(llm="gemini-1.5-flash")
+    assert chatbot is not None
+    assert chatbot.llm is not None
+    assert chatbot.llm == "gemini-1.5-flash"
+    assert chatbot.instructions is None
+    assert chatbot.functions is None
+    assert chatbot.welcome is None
+    assert type(chatbot.client) == Client
+    assert chatbot.llm_master is not None
+    assert type(chatbot.llm_master) == ChatGoogleGenerativeAI
+
+
+def test_chatbot_set_model() -> None:
+    """Check that the node is created correctly."""
+    chatbot = ChatbotNode(llm="gemini-1.5-flash")
+    chatbot.set_model(model="gemini-2.0-flash")
+    assert chatbot.llm is not None
+    assert chatbot.llm == "gemini-1.5-flash"
+    assert chatbot.llm_master is not None
+    assert type(chatbot.llm_master) == ChatGoogleGenerativeAI
+    assert chatbot.llm_master.model == 'models/gemini-2.0-flash'
+
+
+def test_chatbot_run_model(monkeypatch) -> None:
+    """Check that the node is a responsive llm node"""
+    chatbot = ChatbotNode(llm="gemini-1.5-flash")
+    monkeypatch.setattr(chatbot, "run_model", lambda *args, **kwargs: AIMessage(content="hi"))
+    assert chatbot.llm_master is not None
+    result = chatbot.run_model("hi")
+    # check messages is AIMessage
+    assert isinstance(result, AIMessage)
+    assert result.content == "hi"
+
+
+
+def test_chatbot_get_node_with_messages(monkeypatch) -> None:
+    """Check that the node is a responsive llm node"""
+    chatbot = ChatbotNode(llm="gemini-1.5-flash")
+    monkeypatch.setattr(chatbot, "run_model", lambda *args, **kwargs: AIMessage(content="hi"))
+    assert chatbot.llm_master is not None
+    status = {"messages":"hi"}
+    result = chatbot.get_node(status)
+    # check messages is AIMessage
+    assert isinstance(result['messages'], AIMessage)
+    assert result['messages'].content == "hi"
+    assert result['answer'] is None
+    assert result['finished'] is False
+    
+def test_chatbot_get_node_with_messages_answer_directly(monkeypatch) -> None:
+    """Check that the node is a responsive llm node"""
+    chatbot = ChatbotNode(llm="gemini-1.5-flash")
+    monkeypatch.setattr(chatbot, "run_model", lambda *args, **kwargs: AIMessage(content="***ANSWER_DIRECTLY***"))
+    assert chatbot.llm_master is not None
+    status = {"messages":"hi"}
+    result = chatbot.get_node(status)
+    # check messages is AIMessage
+    assert isinstance(result['messages'], AIMessage)
+    assert result['messages'].content == ""
+    assert result['answer'] == ""
+    assert result['finished'] is False
+
+def test_chatbot_get_node_without_messages() -> None:
+    """Check that the node is a responsive llm node"""
+    chatbot = ChatbotNode(llm="gemini-1.5-flash")
+    status = {"messages":None}
+    result = chatbot.get_node(status)
+    # check messages is AIMessage
+    assert isinstance(result['messages'], AIMessage)
+    assert result['messages'].content == "Welcome to the chatbot! How can I assist you today?"
+    assert result['answer'] is None
+    assert result['finished'] is False
+
+
+def test_chatbot_get_node_without_messages_with_welcome() -> None:
+    """Check that the node is a responsive llm node"""
+    chatbot = ChatbotNode(llm="gemini-1.5-flash", welcome="Buongiorno dottore!")
+    status = {"messages":None}
+    result = chatbot.get_node(status)
+    # check messages is AIMessage
+    assert isinstance(result['messages'], AIMessage)
+    assert result['messages'].content == "Buongiorno dottore!"
+    assert result['answer'] is None
+    assert result['finished'] is False
+
+#### Test class SQLNode:
+
+
+def test_sql_node() -> None:
+    """Check that the node is created correctly."""
+    sql_node = SQLNode(instructions="you are a SQL expert", functions=[min, max])
+    assert sql_node is not None
+    assert sql_node.llm is None
+    assert sql_node.welcome is None
+    assert type(sql_node.client) == Client
+    assert sql_node.chat is not None
+    assert type(sql_node.chat) == Chat
+    assert sql_node.instructions == "you are a SQL expert"
+    assert sql_node.functions == [min, max]

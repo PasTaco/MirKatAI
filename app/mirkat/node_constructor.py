@@ -18,7 +18,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 
 class node:
-    def __init__(self, llm=None, instructions=None, functions=None, welcome=None, GOOGLE_API_KEY=None):
+    def __init__(self, llm=None, instructions=None, functions=None, welcome=None):
         self.llm = llm
         self.instructions = instructions
         self.functions = functions
@@ -30,8 +30,6 @@ class node:
 
 
 class HumanNode(node):
-
-
     def get_node(self, state):
         """Display the last model message to the user, and rec
         eive the user's input."""
@@ -45,9 +43,12 @@ class HumanNode(node):
                 #display(Markdown(answer))
                 state["answer"] = None
                 #print()
-            else:
+            elif isinstance(last_msg, AIMessage):
                 print("Assistant:", last_msg.content)
                 #display(Markdown(last_msg.content))
+            else:
+                print("Assistant:", last_msg.text)
+                #display(Markdown(last_msg.text))
         print("="*30)
         return state
 
@@ -60,7 +61,12 @@ class ChatbotNode(node):
     def set_model(self, model):
         self.llm_master = ChatGoogleGenerativeAI(model=model)
 
-
+    def run_model(self, messages):
+        """Run the model with the given messages."""
+        #print(f"--- Message going to the llm_master: {messages}---")
+        response = self.llm_master.invoke(messages)
+        return response
+    
     def get_node(self,state):
         """The chatbot with tools. A simple wrapper around the model's own chat interface."""
         print("\n--- ENTERING: master_node ---")
@@ -73,6 +79,8 @@ class ChatbotNode(node):
         if not messages:
             # Generate the welcome message directly
             print("--- Generating Welcome Message ---")
+            if not self.welcome:
+                self.welcome = "Welcome to the chatbot! How can I assist you today?"
             response = AIMessage(content=self.welcome)
         else:
             # Normal operation: Invoke the master LLM for routing/response
@@ -80,7 +88,7 @@ class ChatbotNode(node):
             # Always invoke with the system message + current history
             print(f"--- Message going to the llm_master: {messages}---")
             #messages_with_system = [{"type": "system", "content": MIRNA_ASSISTANT_SYSTEM_MESSAGE}] + state["messages"]
-            response = self.llm_master.invoke(str(self.instructions) + str(state["messages"]))
+            response = self.run_model(str(self.instructions) + str(state["messages"]))
             if "***ANSWER_DIRECTLY***" in response.content.strip():
                 #response = llm_master.invoke([ORIGINAL_MIRNA_SYSINT_CONTENT_MESSAGE] + messages)
                 response.content = response.content.replace("***ANSWER_DIRECTLY***", "")
@@ -98,7 +106,7 @@ class ChatbotNode(node):
 
 
 
-class SQLNone(node):
+class SQLNode(node):
     def __init__(self, llm=None, instructions=None, functions=None,  welcome=None):
         super().__init__(llm, instructions, functions, welcome)
         self.set_model()
