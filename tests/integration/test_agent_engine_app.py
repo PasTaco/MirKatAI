@@ -132,7 +132,8 @@ def test_agent_plot(agent_app: AgentEngineApp) -> None:
     """
     input_dict = {
         "messages": [
-            {"type": "human", "content": "Plot A: 1, B: 2, C: 3"},
+            {"type": "human", "content":
+              "The user wants to plot the data A: 1, B: 2, C: 3.\nThis data consists of categories (A, B, C) and corresponding numerical values (1, 2, 3).\nA bar plot is a suitable type of plot for displaying categorical data with associated numerical values.\n\nI need to provide detailed information for creating this plot, including:\n1.  **Plot Type:** Bar plot.\n2.  **Data:** Categories A, B, C with values 1, 2, 3.\n3.  **X-axis Label:** 'Category' (or similar, representing the categories A, B, C).\n4.  **Y-axis Label:** 'Value' (or similar, representing the numerical values 1, 2, 3).\n5.  **Title:** A descriptive title, e.g., 'Values per Category'.\n6.  **Other details:** Specify the data points explicitly.\n\nPlan:\n1.  Identify the plot type (Bar plot).\n2.  Define the data (categories and values).\n3.  Specify axis labels.\n4.  Specify the title.\n5.  Format the response clearly stating these details.\n"},
         ],
         "table": None,
         "answer": None,
@@ -151,6 +152,48 @@ def test_agent_plot(agent_app: AgentEngineApp) -> None:
         assert len(event) == 2, "Event should contain message and metadata"
         message, _ = event
 
+        # Verify message structure
+        assert isinstance(message, dict), "Message should be a dictionary"
+        assert message["type"] == "constructor"
+        assert "kwargs" in message, "Constructor message should have kwargs"
+
+    # Verify at least one message has content
+    has_content = False
+    for event in events:
+        message = event[0]
+        if message.get("type") == "constructor" and "content" in message["kwargs"]:
+            has_content = True
+            break
+    assert has_content, "At least one message should have content"
+
+
+def test_agent_plot_bad_response(agent_app: AgentEngineApp) -> None:
+    """
+    Integration test for the agent stream query functionality.
+    Tests that the agent returns valid streaming responses.
+    """
+    input_dict = {
+        "messages": [
+            {"type": "human", "content":
+              "Plot, please"},
+        ],
+        "table": None,
+        "answer": None,
+        "finished": False,
+        "user_id": "test-user",
+        "session_id": "test-session",
+    }
+
+    events = list(agent_app.stream_query(input=input_dict))
+
+    assert len(events) > 0, "Expected at least one chunk in response"
+
+    # Verify each event is a tuple of message and metadata
+    for event in events:
+        assert isinstance(event, list), "Event should be a list"
+        assert len(event) == 2, "Event should contain message and metadata"
+        message, _ = event
+        
         # Verify message structure
         assert isinstance(message, dict), "Message should be a dictionary"
         assert message["type"] == "constructor"

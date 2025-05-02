@@ -224,19 +224,24 @@ class PlotNode(node):
         
         plotting_tools_instance = PlotFunctons('', response_plot)        
         plot = plotting_tools_instance.handle_response()
-        buf = io.BytesIO()
-        plot.savefig(buf, format='png') # Or another format like 'jpeg'
-        plot.savefig("plot", format='svg')
-        buf.seek(0)
-        image_base64 = base64.b64encode(buf.read()).decode('utf-8')
-        buf.close()
-        response_plot.candidates[0].content.parts[0].text =  f"binary_image: {image_base64}"
+        
         answer = ''
         for part in response_plot.candidates[0].content.parts:
             if part.text is not None:
                 answer = answer + f"{part.text}\n"
+        answer_b = answer
+        if plot:
+            
+            buf = io.BytesIO()
+            plot.savefig(buf, format='png') # Or another format like 'jpeg'
+            plot.savefig("plot", format='svg')
+            buf.seek(0)
+            image_base64 = base64.b64encode(buf.read()).decode('utf-8')
+            buf.close()
+            response_plot.candidates[0].content.parts[0].text =  f"binary_image: {image_base64}"
+            answer_b = answer + f"binary_image: {image_base64}"
         return {**state,
-                "messages": AIMessage(content=answer + f"binary_image: {image_base64}"),
+                "messages": AIMessage(content=answer_b),
                 "answer": answer
             #"messages":state["messages"] + [AIMessage(content=answer)]
             }
