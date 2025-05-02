@@ -124,6 +124,19 @@ class SQLNode(node):
             config=config_tools,
         )
 
+    
+
+    def run_model(self, messages):
+        """Run the model with the given messages."""
+        #print(f"--- Message going to the llm_master: {messages}---")
+        response = self.chat.send_message(messages)
+        return response
+
+    def get_queries(self, callings):
+        plotting_tools_instance = PlotFunctons(callings, '')
+        queries = plotting_tools_instance.get_queries()
+        return queries
+
     def get_node(self,state):
         """The sql llm that will check for the sql questions and get a json file in response."""
 
@@ -146,12 +159,11 @@ class SQLNode(node):
 
         #print("The message sent to the SQL node is: ", messages)
         print("The message sent to the SQL node is: ", messages)
-        response = self.chat.send_message(messages.content)
+        response = self.run_model(messages)
         print(f"--- SQL Processor LLM Response: {response} ---")
         print("Run get_queries")
         callings = response.automatic_function_calling_history
-        plotting_tools_instance = PlotFunctons(callings, '')
-        queries = plotting_tools_instance.get_queries()
+        queries = self.get_queries(callings)
         #handle_response(response)
         #response = sql_llm_with_db_tools.invoke([SQL_SYSTEM_INSTRUCTION] + messages)
         #print(f"--- SQL Processor LLM Response: {response} ---")
@@ -168,7 +180,7 @@ class SQLNode(node):
         elif isinstance(response, str):
             print("The response is str")
             new_answer = response
-        new_messages = messages + [AIMessage(content=new_answer)]
+        # new_messages = messages + [AIMessage(content=new_answer)]
         #print(f"--- Answer from SQL Processor LLM Response: {new_answer} ---")
         return {
             #"messages": response.content,
@@ -192,14 +204,22 @@ class PlotNode(node):
             )
         self.plotter_model = self.client.chats.create(model=self.llm, config=config_with_code)
 
+    def run_model(self, messages):
+        """Run the model with the given messages."""
+        #print(f"--- Message going to the llm_master: {messages}---")
+        response_plot = self.plotter_model.send_message(messages)
+        return response_plot
     
+    def handle_response(self, response_plot):
+        plotting_tools_instance = PlotFunctons('', response_plot)
+        plotting_tools_instance.handle_response()
+
     def get_node(self, state):
             messages = state['messages'][-1].content
             queries = state['table']
 
-            response_plot = self.plotter_model.send_message(str(queries) + messages)
-            plotting_tools_instance = self.functions('', response_plot)
-            plotting_tools_instance.handle_response()
+            response_plot = self.run_model(str(queries) + messages)
+            self.handle_response(response_plot)
             answer = ''
             for part in response_plot.candidates[0].content.parts:
                 if part.text is not None:
@@ -214,13 +234,35 @@ class LiteratureNode(node):
     def __init__(self, llm=None, instructions=None, functions=None,  welcome=None):
         super().__init__(llm, instructions, functions, welcome)
         self.client = genai.Client(api_key=GOOGLE_API_KEY)
-        self.get_config()
+        self.set_config()
 
     def set_config(self):
         self.config_with_search = types.GenerateContentConfig(
             tools=[types.Tool(google_search=types.GoogleSearch())],
             )
 
+    def run_model(self, user_query):
+        """Run the model with the given messages."""
+        #print(f"--- Message going to the llm_master: {messages}---")
+        response = self.client.models.generate_content(
+            model=self.llm,
+            contents=user_query,
+            config=self.config_with_search,
+            #system_instruction=LITERATURE_SYSTEM_INSTRUCTION_CONTENT, # Apply system instruction
+        )
+        return response
+    
+    def format_text(self, response):
+        answer = response.text
+        chunks = response.candidates[0].grounding_metadata.grounding_chunks
+        supports = response.candidates[0].grounding_metadata.grounding_supports
+        research_queries=response.candidates[0].grounding_metadata.web_search_queries
+        lit_tools_instance = self.functions(chunks, supports, answer)
+
+        answer=lit_tools_instance.process_references()
+        bibliography=lit_tools_instance.create_bibliography()
+
+        return answer, bibliography, research_queries
     
     def get_node(self, state):
         """Perform GroundSearch with UserQuery
@@ -238,34 +280,19 @@ class LiteratureNode(node):
 
         # --- Model Selection ---
         ## gemini-2.0-flash is faster and return less issues compared to gemini-1.5-flash
-        model_name = self.llm 
         print("\n--- Performing: GroundSearch ---")
 
-        response = self.client.models.generate_content(
-                    model=model_name,
-                    contents=user_query,               # Pass the user's query here
-                    config=self.config_with_search, # Apply the grounding config
-                    # system_instruction=LITERATURE_SYSTEM_INSTRUCTION_CONTENT, # Apply system instruction
-                )
+        response = self.run_model(user_query)
 
-        answer = response.text
-        chunks = response.candidates[0].grounding_metadata.grounding_chunks
-        supports = response.candidates[0].grounding_metadata.grounding_supports
-        research_queries=response.candidates[0].grounding_metadata.web_search_queries
-        lit_tools_instance = self.functions(chunks, supports, answer)
 
-        answer=lit_tools_instance.process_references()
-        bibliography=lit_tools_instance.create_bibliography()
-
+        answer,bibliography, research_queries= self.format_text(response)
 
         
         #print(F"----- ANSWER: {answer} -------")
 
 
-        return {
+        return {**state,
             "messages": answer,
-            "table" : state["table"],
             "answer": answer,
             "bibliography": bibliography,
-            "research_queries": research_queries,
-            "finished": state["finished"]}
+            "research_queries": research_queries}

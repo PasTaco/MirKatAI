@@ -244,3 +244,138 @@ def test_sql_node() -> None:
     assert type(sql_node.chat) == Chat
     assert sql_node.instructions == "you are a SQL expert"
     assert sql_node.functions == [min, max]
+
+
+
+def test_sql_without_messages() -> None:
+    """Check that the node is a responsive llm node"""
+    sql_node = SQLNode(instructions="you are a SQL expert", functions=[min, max])
+    status = {"messages":None}
+    result = sql_node.get_node(status)
+    assert result['messages'] is None
+
+
+def test_sql_with_messages_str(monkeypatch) -> None:
+    """Check that the node is a responsive llm node"""
+    sql_node = SQLNode(instructions="you are a SQL expert", functions=[min, max])
+    status = {"messages":"hi"}
+    def mock_run_model(*args, **kwargs):
+        fake_response = GenerateContentResponse
+        fake_response.automatic_function_calling_history= 'many functions'
+        fake_response.text = "Risotto alla Milanese"
+        return fake_response
+
+    monkeypatch.setattr(sql_node, "run_model", 
+                        mock_run_model)
+                        
+    monkeypatch.setattr(sql_node, "get_queries", 
+                        lambda *args, **kwargs: {"query":"result"})
+    
+    result = sql_node.get_node(status)
+
+    # check messages is AIMessage
+    assert isinstance(result['messages'], AIMessage)
+    assert result['messages'].content == "This was the answer from SQL node, please format and give to the user: Risotto alla Milanese"
+    assert result['answer'] == ""
+    assert result['table'] == {"query":"result"}
+    assert result['finished'] is False
+
+
+
+
+def test_sql_with_messages_GenerateContentResponse(monkeypatch) -> None:
+    """Check that the node is a responsive llm node"""
+    sql_node = SQLNode(instructions="you are a SQL expert", functions=[min, max])
+    status = {"messages":GenerateContentResponse}
+    def mock_run_model(*args, **kwargs):
+        fake_response = GenerateContentResponse
+        fake_response.automatic_function_calling_history= 'many functions'
+        fake_response.text = "Risotto alla Milanese"
+        return fake_response
+
+    monkeypatch.setattr(sql_node, "run_model", 
+                        mock_run_model)
+                        
+    monkeypatch.setattr(sql_node, "get_queries", 
+                        lambda *args, **kwargs: {"query":"result"})
+    
+    result = sql_node.get_node(status)
+
+    # check messages is AIMessage
+    assert isinstance(result['messages'], AIMessage)
+    assert result['messages'].content == "This was the answer from SQL node, please format and give to the user: Risotto alla Milanese"
+    assert result['answer'] == ""
+    assert result['table'] == {"query":"result"}
+    assert result['finished'] is False
+
+
+#### Test class PlotNode:
+
+def test_plot_node() -> None:
+    """Check that the node is created correctly."""
+    plot_node = PlotNode(instructions="you are a plot expert", functions=[min, max])
+    assert plot_node is not None
+    assert plot_node.llm is None
+    assert plot_node.welcome is None
+    assert type(plot_node.client) == Client
+    assert plot_node.plotter_model is not None
+    assert type(plot_node.plotter_model) == Chat
+    assert plot_node.instructions == "you are a plot expert"
+    assert plot_node.functions == [min, max]
+
+
+from google.genai.types import Candidate, Content,Part, GenerateContentConfig
+def test_plot_get_node(monkeypatch) -> None:
+    """Check that the node is a responsive llm node"""
+    plot_node = PlotNode(instructions="you are a plot expert", functions=[min, max])
+    status = {"messages":[None,AIMessage(content="hi")], "table":'data'}
+    def mock_run_model(*args, **kwargs):
+        fake_response = GenerateContentResponse
+        fake_response.automatic_function_calling_history= 'many functions'
+        fake_response.text = "Risotto alla Milanese"
+        fake_response.candidates = [Candidate(content=Content(parts=[Part]))]
+        return fake_response
+
+    monkeypatch.setattr(plot_node, "run_model", 
+                            mock_run_model)
+    monkeypatch.setattr(plot_node,
+                        "handle_response",
+                        lambda *args, **kwargs: None)
+    result = plot_node.get_node(status)
+    # check messages is AIMessage
+    assert result['messages'] == [None, 
+                                  AIMessage(content='hi', additional_kwargs={}, response_metadata={}), 
+                                  AIMessage(content='', additional_kwargs={}, response_metadata={})]
+    assert result['table'] == 'data'
+
+
+#### Test class LiteratureNode:
+
+def test_literature_node() -> None:
+    """Check that the node is created correctly."""
+    literature_node = LiteratureNode(instructions="you are a literature expert", functions=[min, max])
+    assert literature_node is not None
+    assert literature_node.llm is None
+    assert literature_node.welcome is None
+    assert type(literature_node.client) == Client
+    assert literature_node.instructions == "you are a literature expert"
+    assert literature_node.functions == [min, max]
+    assert literature_node.config_with_search is not None
+    assert type(literature_node.config_with_search) == GenerateContentConfig
+
+from types import SimpleNamespace
+def test_literature_get_node(monkeypatch) -> None:
+    """Check that the node is a responsive llm node"""
+    literature_node = LiteratureNode(instructions="you are a literature expert", functions=[min, max])
+    status = {"messages":None}
+
+    monkeypatch.setattr(literature_node, "run_model", 
+                            lambda *args, **kwargs: "Research done")
+    monkeypatch.setattr(literature_node, "format_text",
+                        lambda *args, **kwargs: ("# markdown text","bibliography", "queries"))
+    result = literature_node.get_node(status)
+    # check messages is AIMessage
+    assert result['messages'] == "# markdown text"
+    assert result['answer'] == "# markdown text"
+    assert result['bibliography'] == "bibliography"
+    assert result['research_queries'] == "queries"
