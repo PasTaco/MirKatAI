@@ -329,7 +329,7 @@ def literature_search_node(state: GraphState) -> GraphState:
         "research_queries": research_queries,
         "finished": state["finished"]}
 
-buf = io.BytesIO()
+
 def plot_node(state:GraphState) -> GraphState:
     print("\n--- ENTERING: plot_node ---")
     print(f"State values: {state.keys()}")
@@ -343,40 +343,23 @@ def plot_node(state:GraphState) -> GraphState:
     print(content)
     
     plot = plotting_tools_instance.handle_response()
-    
+    import pickle
+    # Save the plot to a file
+    with open('tests/dummy_files/plot.pkl', 'wb') as f:
+        pickle.dump(plot, f)
+    buf = io.BytesIO()
     plot.savefig(buf, format='png') # Or another format like 'jpeg'
     plot.savefig("plot", format='svg')
     buf.seek(0)
     image_base64 = base64.b64encode(buf.read()).decode('utf-8')
-    #print(f"Image base64: {image_base64}")
     buf.close()
     response_plot.candidates[0].content.parts[0].text =  f"binary_image: {image_base64}"
-    #mime_type = "image/png"
-    #data_uri = f"data:{mime_type};base64,{image_base64}"
-    #image_content_part = {
-    #"type": "image_url",
-    #"image_url": {
-    #    "url": data_uri
-    #}
-#}
     answer = ''
     for part in response_plot.candidates[0].content.parts:
         if part.text is not None:
             answer = answer + f"{part.text}\n"
     print(f"--- Plot Node LLM Response: {answer} ---")
     
-    
-    # if isinstance(response_plot.candidates[0].content, str):
-    #     response_plot.candidates[0].content = [
-    #         {"type": "text", "text": response_plot.candidates[0].content},
-    #         image_content_part
-    #         ]
-    # elif isinstance(response_plot.candidates[0].content, list):
-    #     response_plot.candidates[0].content.append(image_content_part)
-    # else: # Handle unexpected content type or create new
-    #     response_plot.candidates[0].content = [image_content_part]
-
-    print("--Leaving plot node---")
     return {**state,
             "messages": AIMessage(content=answer + f"binary_image: {image_base64}"),
             "answer": answer

@@ -8,7 +8,9 @@ from google import genai
 from dotenv import load_dotenv
 import os
 from app.mirkat.plot_functions import PlotFunctons
-
+import base64
+import io
+from app.mirkat.global_variables import SQL_QUERIES
 
 # Load .env file
 load_dotenv()
@@ -202,12 +204,12 @@ class PlotNode(node):
             tools=[types.Tool(code_execution=types.ToolCodeExecution())],
             temperature=0.0,
             )
-        self.plotter_model = self.client.chats.create(model=self.llm, config=config_with_code)
+        self.model = self.client.chats.create(model=self.llm, config=config_with_code)
 
     def run_model(self, messages):
         """Run the model with the given messages."""
         #print(f"--- Message going to the llm_master: {messages}---")
-        response_plot = self.plotter_model.send_message(messages)
+        response_plot = self.model.send_message(messages)
         return response_plot
     
     def handle_response(self, response_plot):
@@ -215,19 +217,30 @@ class PlotNode(node):
         plotting_tools_instance.handle_response()
 
     def get_node(self, state):
-            messages = state['messages'][-1].content
-            queries = state['table']
+        messages = state['messages'].content
+        queries = SQL_QUERIES # state['table']
 
-            response_plot = self.run_model(str(queries) + messages)
-            self.handle_response(response_plot)
-            answer = ''
-            for part in response_plot.candidates[0].content.parts:
-                if part.text is not None:
-                    answer = answer + f"{part.text}\n"
-            
-            return {**state,
-                "messages":state["messages"] + [AIMessage(content=answer)]
-                }
+        response_plot = self.run_model(str(queries) + "The code to plot, should save the final figure on variable figure." + messages)
+        
+        plotting_tools_instance = PlotFunctons('', response_plot)        
+        plot = plotting_tools_instance.handle_response()
+        buf = io.BytesIO()
+        plot.savefig(buf, format='png') # Or another format like 'jpeg'
+        plot.savefig("plot", format='svg')
+        buf.seek(0)
+        image_base64 = base64.b64encode(buf.read()).decode('utf-8')
+        buf.close()
+        response_plot.candidates[0].content.parts[0].text =  f"binary_image: {image_base64}"
+        answer = ''
+        for part in response_plot.candidates[0].content.parts:
+            if part.text is not None:
+                answer = answer + f"{part.text}\n"
+        return {**state,
+                "messages": AIMessage(content=answer + f"binary_image: {image_base64}"),
+                "answer": answer
+            #"messages":state["messages"] + [AIMessage(content=answer)]
+            }
+    
     
 
 class LiteratureNode(node):

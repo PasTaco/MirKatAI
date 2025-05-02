@@ -27,6 +27,8 @@ from app.mirkat.node_constructor import (
 
 )
 
+import app.mirkat.plot_functions as plot_functions
+
 from langchain_core.messages import ( # Grouped message types
     AIMessage
 )
@@ -318,8 +320,8 @@ def test_plot_node() -> None:
     assert plot_node.llm is None
     assert plot_node.welcome is None
     assert type(plot_node.client) == Client
-    assert plot_node.plotter_model is not None
-    assert type(plot_node.plotter_model) == Chat
+    assert plot_node.model is not None
+    assert type(plot_node.model) == Chat
     assert plot_node.instructions == "you are a plot expert"
     assert plot_node.functions == [min, max]
 
@@ -328,7 +330,12 @@ from google.genai.types import Candidate, Content,Part, GenerateContentConfig
 def test_plot_get_node(monkeypatch) -> None:
     """Check that the node is a responsive llm node"""
     plot_node = PlotNode(instructions="you are a plot expert", functions=[min, max])
-    status = {"messages":[None,AIMessage(content="hi")], "table":'data'}
+    status = {"messages":AIMessage(content="hi"), "table":'data'}
+    # see current directory
+    import pickle
+    
+    #response_plot = pickle.load(open("tests/dummy_files/plot_response.pkl", "rb"))
+    plot = pickle.load(open("tests/dummy_files/plot.pkl", "rb"))
     def mock_run_model(*args, **kwargs):
         fake_response = GenerateContentResponse
         fake_response.automatic_function_calling_history= 'many functions'
@@ -338,14 +345,15 @@ def test_plot_get_node(monkeypatch) -> None:
 
     monkeypatch.setattr(plot_node, "run_model", 
                             mock_run_model)
-    monkeypatch.setattr(plot_node,
+    monkeypatch.setattr(plot_functions.PlotFunctons,
                         "handle_response",
-                        lambda *args, **kwargs: None)
+                        lambda *args, **kwargs: plot)
     result = plot_node.get_node(status)
+    print(result)
     # check messages is AIMessage
-    assert result['messages'] == [None, 
-                                  AIMessage(content='hi', additional_kwargs={}, response_metadata={}), 
-                                  AIMessage(content='', additional_kwargs={}, response_metadata={})]
+    result_message = result['messages'].content
+    
+    assert "binary_image" in result_message                    
     assert result['table'] == 'data'
 
 
