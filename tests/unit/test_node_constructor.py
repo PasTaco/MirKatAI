@@ -40,7 +40,11 @@ from google.genai.chats import Chat
 from google.genai.types import GenerateContentResponse
 
 import pickle
-
+import sys
+import os
+current_path = os.path.dirname(os.path.abspath(__file__))
+if current_path.endswith("tests/unit"):
+    sys.path.append("../tests")
 ## Test class node:
 def test_create_node() -> None:
     """Check that the node is created correctly."""
@@ -333,7 +337,8 @@ def test_plot_get_node(monkeypatch) -> None:
     """Check that the node is a responsive llm node"""
     plot_node = PlotNode(instructions="you are a plot expert", functions=[min, max])
     status = {"messages":AIMessage(content="hi"), "table":'data'}
-    # see current directory    
+    # see current directory 
+
     plot = pickle.load(open("tests/dummy_files/plot.pkl", "rb"))
     def mock_run_model(*args, **kwargs):
         fake_response = GenerateContentResponse
@@ -370,11 +375,10 @@ def test_literature_node() -> None:
     assert literature_node.config_with_search is not None
     assert type(literature_node.config_with_search) == GenerateContentConfig
 
-from types import SimpleNamespace
 def test_literature_get_node(monkeypatch) -> None:
     """Check that the node is a responsive llm node"""
     literature_node = LiteratureNode(instructions="you are a literature expert", functions=[min, max])
-    status = {"messages":None}
+    status = {"messages":AIMessage(content="hi")}
 
     monkeypatch.setattr(literature_node, "run_model", 
                             lambda *args, **kwargs: "Research done")
@@ -382,7 +386,4 @@ def test_literature_get_node(monkeypatch) -> None:
                         lambda *args, **kwargs: ("# markdown text","bibliography", "queries"))
     result = literature_node.get_node(status)
     # check messages is AIMessage
-    assert result['messages'] == "# markdown text"
-    assert result['answer'] == "# markdown text"
-    assert result['bibliography'] == "bibliography"
-    assert result['research_queries'] == "queries"
+    assert result['messages'] == AIMessage(content='# markdown textbibliography', additional_kwargs={}, response_metadata={})

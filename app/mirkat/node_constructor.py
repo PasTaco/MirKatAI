@@ -245,7 +245,7 @@ class PlotNode(node):
             buf.seek(0)
             image_base64 = base64.b64encode(buf.read()).decode('utf-8')
             buf.close()
-            response_plot.candidates[0].content.parts[0].text =  f"binary_image: {image_base64}"
+            # response_plot.candidates[0].content.parts[0].text =  f"binary_image: {image_base64}"
             answer_b = answer + f"binary_image: {image_base64}"
         return {**state,
                 "messages": AIMessage(content=answer_b),
@@ -296,7 +296,7 @@ class LiteratureNode(node):
         - Bibliography: References, link and website use to obtain the answer
         - ResearcQueries: Quesries used to perform GroundSearch"""
         #print("\n--- ENTERING: Literature node ---")
-        user_query = state["messages"]
+        user_query = state["messages"].content
         #print(f"\n--- SEARCHING {user_query} with GroundSearch model ---")
 
         # --- Grounding Setup ---
@@ -317,7 +317,4 @@ class LiteratureNode(node):
 
 
         return {**state,
-            "messages": answer,
-            "answer": answer,
-            "bibliography": bibliography,
-            "research_queries": research_queries}
+        "messages": AIMessage(content= answer+bibliography),}

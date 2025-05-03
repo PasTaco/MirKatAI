@@ -41,8 +41,7 @@ import io
 ## load env variables and set up gemini API key:
 
 from dotenv import load_dotenv
-from app.mirkat.node_constructor import (PlotNode, SQLNode)
-
+from app.mirkat.node_constructor import (PlotNode, SQLNode,LiteratureNode)
 # Load .env file
 load_dotenv()
 
@@ -53,6 +52,7 @@ LOCATION = "europe-west1"
 LLM = "gemini-2.0-flash"
 LLM_SQL = "gemini-2.5-flash-preview-04-17"
 LLM_PLOT = "gemini-2.5-flash-preview-04-17"
+
 #LLM = "gemini-2.0-flash-lite"
 
 
@@ -118,7 +118,7 @@ config_tools = types.GenerateContentConfig(
 
 # Start a chat with automatic function calling enabled.
 chat = client.chats.create(
-    model=LLM,
+    model=LLM_SQL,
     config=config_tools,
 )
 
@@ -229,57 +229,10 @@ SQL_QUERIES = {}
     
 
 
-def literature_search_node(state: GraphState) -> GraphState:
-    """Perform GroundSearch with UserQuery
-    Returns:
-    - Answer: Markdown formatted text answer from Ground Search iwth clickable references
-    - Bibliography: References, link and website use to obtain the answer
-    - ResearcQueries: Quesries used to perform GroundSearch"""
-    #print("\n--- ENTERING: Literature node ---")
-    user_query = state["messages"]
-    #print(f"\n--- SEARCHING {user_query} with GroundSearch model ---")
 
-    # --- Grounding Setup ---
-    # Use the native Google Search tool for grounding
-  
-
-    # --- Model Selection ---
-    ## gemini-2.0-flash is faster and return less issues compared to gemini-1.5-flash
-    model_name = LLM 
-    print("\n--- Performing: GroundSearch ---")
-
-    response = client.models.generate_content(
-                model=model_name,
-                contents=user_query,               # Pass the user's query here
-                config=config_with_search, # Apply the grounding config
-                # system_instruction=LITERATURE_SYSTEM_INSTRUCTION_CONTENT, # Apply system instruction
-            )
-
-    answer = response.text
-    chunks = response.candidates[0].grounding_metadata.grounding_chunks
-    supports = response.candidates[0].grounding_metadata.grounding_supports
-    research_queries=response.candidates[0].grounding_metadata.web_search_queries
-    lit_tools_instance = LiteratureTools(chunks, supports, answer)
-
-    answer=lit_tools_instance.process_references()
-    bibliography=lit_tools_instance.create_bibliography()
-
-
-    
-    #print(F"----- ANSWER: {answer} -------")
-
-
-    return {
-        "messages": answer,
-        "table" : state["table"],
-        "answer": answer,
-        "bibliography": bibliography,
-        "research_queries": research_queries,
-        "finished": state["finished"]}
-
+literature_search_node = LiteratureNode(llm=LLM, functions=LiteratureTools)
 plot_node = PlotNode(llm=LLM_PLOT)
 sql_node = SQLNode(llm=LLM_SQL, instructions=SQL_INSTRUCTIONS, functions=db_tools)
-
 all_tools = db_tools # Add literature search tools here if they were LangChain tools
 tool_node = ToolNode(all_tools)
 
@@ -447,7 +400,7 @@ workflow = StateGraph(GraphState)
 workflow.add_node(HUMAN_NODE, human_node)
 workflow.add_node(CHATBOT_NODE, chatbot_with_tools)
 workflow.add_node(SQL_NODE, sql_node.get_node)
-# workflow.add_node(LITERATURE_NODE, literature_search_node)
+workflow.add_node(LITERATURE_NODE, literature_search_node.get_node)
 workflow.add_node(TOOL_NODE, tool_node)
 workflow.add_node(PLOT_NODE, plot_node.get_node)
 
@@ -473,7 +426,7 @@ workflow.add_conditional_edges(
     route_chatbot_decision, # Function to decide based on chatbot output
     {
         SQL_NODE: SQL_NODE,                 # Route to SQL processor
-        # LITERATURE_NODE: LITERATURE_NODE,   # Route to Literature searcher
+        LITERATURE_NODE: LITERATURE_NODE,   # Route to Literature searcher
         TOOL_NODE: TOOL_NODE,               # Route to execute chatbot's tools (get_menu)
         HUMAN_NODE: HUMAN_NODE,             # Route to show chatbot's direct answer
         PLOT_NODE: PLOT_NODE,              # Route to plot node
@@ -493,25 +446,26 @@ workflow.add_conditional_edges(
 )
 
 # 5. From Literature Search Node
-# workflow.add_conditional_edges(
-#    LITERATURE_NODE,
-#    route_processor_output, # Function to decide based on Literature processor output
-#    {
-#        TOOL_NODE: TOOL_NODE,   # Route to execute literature tools (ground_search)
-#        HUMAN_NODE: HUMAN_NODE  # Route to show final literature answer
-#    }
-# )
+workflow.add_conditional_edges(
+   LITERATURE_NODE,
+   route_processor_output, # Function to decide based on Literature processor output
+   {
+        HUMAN_NODE: HUMAN_NODE,
+        CHATBOT_NODE: CHATBOT_NODE, # Route to main chatbot (if needed)
+        END : END  # Route to show final literature answer
+   }
+)
 
 # 6. From Tool Node - Route back to the appropriate processor
-# workflow.add_conditional_edges(
-#     TOOL_NODE,
-#     route_after_tools,
-#     {
-#         SQL_NODE: SQL_NODE,
-#         LITERATURE_NODE: LITERATURE_NODE,
-#         HUMAN_NODE: HUMAN_NODE # Fallback route
-#     }
-# )
+workflow.add_conditional_edges(
+    TOOL_NODE,
+    route_after_tools,
+    {
+        SQL_NODE: SQL_NODE,
+        LITERATURE_NODE: LITERATURE_NODE,
+        HUMAN_NODE: HUMAN_NODE # Fallback route
+    }
+)
 
 
 workflow.add_edge(PLOT_NODE, END)
