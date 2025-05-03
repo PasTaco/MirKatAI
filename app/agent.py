@@ -41,7 +41,7 @@ import io
 ## load env variables and set up gemini API key:
 
 from dotenv import load_dotenv
-from app.mirkat.node_constructor import (PlotNode)
+from app.mirkat.node_constructor import (PlotNode, SQLNode)
 
 # Load .env file
 load_dotenv()
@@ -69,7 +69,6 @@ llm_master = ChatGoogleGenerativeAI(model=LLM)
 
 MIRNA_ASSISTANT_SYSTEM_MESSAGE, WELCOME_MSG = Instructions.router.get_instruction()
 SQL_INSTRUCTIONS = Instructions.sql.get_instruction()
-
 
 ### SQL tables descriptions
 
@@ -227,59 +226,6 @@ def chatbot_with_tools(state: GraphState) -> GraphState:
     }
     return state
 SQL_QUERIES = {}
-def sql_processor_node(state: GraphState) -> GraphState:
-    """The sql llm that will check for the sql questions and get a json file in response."""
-    print("--- Calling SQL Processor Node ---")
-    messages = state['messages']
-    if not messages:
-        # Should ideally not happen if routing is correct
-        #print("Warning: SQL processor called with no messages.")
-        # Return unchanged state or add an error message? For now, return unchanged.
-        return state
-
-    print("The type of the message is: ", type(messages))
-    # check if it is GenerateContentResponse
-    if isinstance(messages, GenerateContentResponse):
-        print("The message is GenerateContentResponse, changing to AIMessage")
-        messages = AIMessage(content=messages.candidates[0].content)
-    elif isinstance(messages, str):
-        print("The message is str, changing to AIMessage")
-        messages = AIMessage(content=messages)
-
-    #print("The message sent to the SQL node is: ", messages)
-    print("The message sent to the SQL node is: ", messages)
-    response = chat.send_message(messages.content)
-    print(f"--- SQL Processor LLM Response: {response} ---")
-    print("Run get_queries")
-    callings = response.automatic_function_calling_history
-    plotting_tools_instance = PlotFunctons(callings, '')
-    queries = plotting_tools_instance.get_queries()
-    SQL_QUERIES.update(queries)
-    #handle_response(response)
-    #response = sql_llm_with_db_tools.invoke([SQL_SYSTEM_INSTRUCTION] + messages)
-    #print(f"--- SQL Processor LLM Response: {response} ---")
-    
-    
-    new_answer = state.get("answer", "")
-    
-    if isinstance(response, AIMessage) and response.content and not response.tool_calls:
-         print("The response is AIMessage")
-         new_answer = response.content # Update answer if it's a direct text response
-    elif isinstance(response, GenerateContentResponse):
-        print("The response is GenerateContentResponse")
-        new_answer = response.text
-    elif isinstance(response, str):
-        print("The response is str")
-        new_answer = response
-    new_messages = messages + [AIMessage(content=new_answer)]
-    #print(f"--- Answer from SQL Processor LLM Response: {new_answer} ---")
-    return {
-        #"messages": response.content,
-        "messages": AIMessage(content="This was the answer from SQL node, please format and give to the user: "+response.text), # Add the router's decision/response
-        "table": queries, # Use .get for safety
-        "answer": new_answer, # Return the potentially updated answer
-        "finished": state.get("finished", False), # Use .get for safety
-    }
     
 
 
@@ -332,7 +278,7 @@ def literature_search_node(state: GraphState) -> GraphState:
         "finished": state["finished"]}
 
 plot_node = PlotNode(llm=LLM_PLOT)
-    
+sql_node = SQLNode(llm=LLM_SQL, instructions=SQL_INSTRUCTIONS, functions=db_tools)
 
 all_tools = db_tools # Add literature search tools here if they were LangChain tools
 tool_node = ToolNode(all_tools)
@@ -500,7 +446,7 @@ workflow = StateGraph(GraphState)
 # Add Nodes
 workflow.add_node(HUMAN_NODE, human_node)
 workflow.add_node(CHATBOT_NODE, chatbot_with_tools)
-workflow.add_node(SQL_NODE, sql_processor_node)
+workflow.add_node(SQL_NODE, sql_node.get_node)
 # workflow.add_node(LITERATURE_NODE, literature_search_node)
 workflow.add_node(TOOL_NODE, tool_node)
 workflow.add_node(PLOT_NODE, plot_node.get_node)
