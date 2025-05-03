@@ -33,6 +33,7 @@ from frontend.utils.message_editing import MessageEditing
 from frontend.utils.multimodal_utils import format_content, get_parts_from_files
 from frontend.utils.stream_handler import Client, StreamHandler, get_chain_response
 
+from PIL import Image
 USER = "my_user"
 EMPTY_CHAT_NAME = "Empty chat"
 
@@ -40,13 +41,24 @@ EMPTY_CHAT_NAME = "Empty chat"
 def setup_page() -> None:
     """Configure the Streamlit page settings."""
     st.set_page_config(
-        page_title="Playground",
+        page_title="MirKatAI",
         layout="wide",
         initial_sidebar_state="auto",
         menu_items=None,
     )
-    st.title("Playground")
-    st.markdown(MARKDOWN_STR, unsafe_allow_html=True)
+    # Load SVG logo
+    logo = Image.open("frontend/assets/MiRkatAI.png")
+    st.markdown(
+        """
+        <div style="display: flex; align-items: center; gap: 10px; align-items: center;">
+        """,
+        unsafe_allow_html=True
+    )
+    col1, col2 = st.columns([1, 10])
+    with col1:
+        st.image(logo, width=75)
+    with col2:
+        st.markdown("## MirKatAI")
 
 
 def initialize_session_state() -> None:
