@@ -220,3 +220,95 @@ def test_agent_plot_bad_response(agent_app: AgentEngineApp) -> None:
             break
     assert has_content, "At least one message should have content"
 
+
+def test_agent_literature(agent_app: AgentEngineApp) -> None:
+    """
+    Integration test for the agent stream query functionality.
+    Tests that the agent returns valid streaming responses.
+    """
+    input_dict = {
+        "messages": [
+            {"type": "human", "content":
+              "Search for the role of microRNAs in cancer"},
+        ],
+        "table": None,
+        "answer": None,
+        "finished": False,
+        "user_id": "test-user",
+        "session_id": "test-session",
+    }
+
+    events = list(agent_app.stream_query(input=input_dict))
+
+    assert len(events) > 0, "Expected at least one chunk in response"
+    has_reference = False
+    for event in events:
+        assert isinstance(event, list), "Event should be a list"
+        assert len(event) == 2, "Event should contain message and metadata"
+        message, _ = event
+
+        # Verify message structure
+        assert isinstance(message, dict), "Message should be a dictionary"
+        assert message["type"] == "constructor"
+        assert "kwargs" in message, "Constructor message should have kwargs"
+        kwargs = message["kwargs"]
+        print(kwargs)
+        assert "content" in kwargs, "Content should be in kwargs"
+        if "[[1](" in kwargs['content']:
+            has_reference = True
+
+    # Verify at least one message has content
+    has_content = False
+    for event in events:
+        message = event[0]
+        if message.get("type") == "constructor" and "content" in message["kwargs"]:
+            has_content = True
+            break
+    assert has_content, "At least one message should have content"
+    assert has_reference, "At least one message should have a reference"
+    
+def test_agent_literature_bad_response(agent_app: AgentEngineApp) -> None:
+    """
+    Integration test for the agent stream query functionality.
+    Tests that the agent returns valid streaming responses.
+    """
+    input_dict = {
+        "messages": [
+            {"type": "human", "content":
+              "Don't search anything"},
+        ],
+        "table": None,
+        "answer": None,
+        "finished": False,
+        "user_id": "test-user",
+        "session_id": "test-session",
+    }
+
+    events = list(agent_app.stream_query(input=input_dict))
+
+    assert len(events) > 0, "Expected at least one chunk in response"
+    has_reference = False
+    # Verify each event is a tuple of message and metadata
+    for event in events:
+        assert isinstance(event, list), "Event should be a list"
+        assert len(event) == 2, "Event should contain message and metadata"
+        message, _ = event
+        
+        # Verify message structure
+        assert isinstance(message, dict), "Message should be a dictionary"
+        assert message["type"] == "constructor"
+        assert "kwargs" in message, "Constructor message should have kwargs"
+        kwargs = message["kwargs"]
+        print(kwargs)
+        assert "content" in kwargs, "Content should be in kwargs"
+        if "[[1](" in kwargs['content']:
+            has_reference = True
+    # Verify at least one message has content
+    has_content = False
+    for event in events:
+        message = event[0]
+        if message.get("type") == "constructor" and "content" in message["kwargs"]:
+            has_content = True
+            break
+    assert has_content, "At least one message should have content"
+    assert not has_reference, "At least one message should have a reference"
