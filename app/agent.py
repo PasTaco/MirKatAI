@@ -138,7 +138,7 @@ config_with_code = types.GenerateContentConfig(
     temperature=0.0,
 )
 
-plotter_model = client.chats.create(model=LLM, config=config_with_code, instructions=PLOT_INSTRUCTIONS)
+plotter_model = client.chats.create(model=LLM, config=config_with_code)
 
 
 
@@ -232,7 +232,7 @@ SQL_QUERIES = {}
 
 
 literature_search_node = LiteratureNode(llm=LLM, functions=LiteratureTools)
-plot_node = PlotNode(llm=LLM_PLOT)
+plot_node = PlotNode(llm=LLM_PLOT, instructions=PLOT_INSTRUCTIONS)
 sql_node = SQLNode(llm=LLM_SQL, instructions=SQL_INSTRUCTIONS, functions=db_tools)
 all_tools = db_tools # Add literature search tools here if they were LangChain tools
 tool_node = ToolNode(all_tools)
