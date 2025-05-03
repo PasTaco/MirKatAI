@@ -130,8 +130,10 @@ class SQLNode(node):
 
     def run_model(self, messages):
         """Run the model with the given messages."""
-        #print(f"--- Message going to the llm_master: {messages}---")
-        response = self.chat.send_message(messages)
+        print(f"--- Message entering run model: {messages}---")
+        text = messages.content
+        print (f"--- Message going to the sql model: {text}---")
+        response = self. chat.send_message(text)
         return response
 
     def get_queries(self, callings):
@@ -158,6 +160,11 @@ class SQLNode(node):
         elif isinstance(messages, str):
             print("The message is str, changing to AIMessage")
             messages = AIMessage(content=messages)
+        elif isinstance(messages, AIMessage):
+            pass
+        else:
+            print("The message is not str or AIMessage, changing to AIMessage")
+            print("The type of the message is: ", type(messages))
 
         #print("The message sent to the SQL node is: ", messages)
         print("The message sent to the SQL node is: ", messages)
@@ -166,6 +173,7 @@ class SQLNode(node):
         print("Run get_queries")
         callings = response.automatic_function_calling_history
         queries = self.get_queries(callings)
+        SQL_QUERIES.update(queries)
         #handle_response(response)
         #response = sql_llm_with_db_tools.invoke([SQL_SYSTEM_INSTRUCTION] + messages)
         #print(f"--- SQL Processor LLM Response: {response} ---")
@@ -173,15 +181,15 @@ class SQLNode(node):
         
         new_answer = state.get("answer", "")
         
-        if isinstance(response, AIMessage) and response.content and not response.tool_calls:
-            print("The response is AIMessage")
-            new_answer = response.content # Update answer if it's a direct text response
-        elif isinstance(response, GenerateContentResponse):
-            print("The response is GenerateContentResponse")
-            new_answer = response.text
-        elif isinstance(response, str):
-            print("The response is str")
-            new_answer = response
+        # if isinstance(response, AIMessage) and response.content and not response.tool_calls:
+        #     print("The response is AIMessage")
+        #     new_answer = response.content # Update answer if it's a direct text response
+        # elif isinstance(response, GenerateContentResponse):
+        #     print("The response is GenerateContentResponse")
+        #     new_answer = response.text
+        # elif isinstance(response, str):
+        #     print("The response is str")
+        #     new_answer = response
         # new_messages = messages + [AIMessage(content=new_answer)]
         #print(f"--- Answer from SQL Processor LLM Response: {new_answer} ---")
         return {

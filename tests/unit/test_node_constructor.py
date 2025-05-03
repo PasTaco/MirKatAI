@@ -387,3 +387,22 @@ def test_literature_get_node(monkeypatch) -> None:
     result = literature_node.get_node(status)
     # check messages is AIMessage
     assert result['messages'] == AIMessage(content='# markdown textbibliography', additional_kwargs={}, response_metadata={})
+
+
+def test_sql_get_node(monkeypatch) -> None:
+    """Check that the node is a responsive llm node"""
+    sql_node = SQLNode(instructions="you are a SQL expert,", functions=[min, max])
+    status = {"messages":AIMessage(content="hi")}
+    def mock_run_model(*args, **kwargs):
+        fake_response = GenerateContentResponse
+        fake_response.automatic_function_calling_history= 'many functions'
+        fake_response.text = "Risotto alla Milanese"
+        fake_response.candidates = [Candidate(content=Content(parts=[Part]))]
+        return fake_response
+    def mock_get_queries(*args, **kwargs):
+        return {"query":"select * from table"}
+    monkeypatch.setattr(sql_node, "run_model", mock_run_model)
+    monkeypatch.setattr(sql_node, "get_queries", mock_get_queries)
+    result = sql_node.get_node(status)
+    # check messages is AIMessage
+    assert "This was the answer from SQL node, please format and give to the user:" in result['messages'].content
