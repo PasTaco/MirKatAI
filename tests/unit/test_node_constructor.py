@@ -39,6 +39,8 @@ from google.genai.chats import Chat
 
 from google.genai.types import GenerateContentResponse
 
+import pickle
+
 ## Test class node:
 def test_create_node() -> None:
     """Check that the node is created correctly."""
@@ -331,10 +333,7 @@ def test_plot_get_node(monkeypatch) -> None:
     """Check that the node is a responsive llm node"""
     plot_node = PlotNode(instructions="you are a plot expert", functions=[min, max])
     status = {"messages":AIMessage(content="hi"), "table":'data'}
-    # see current directory
-    import pickle
-    
-    #response_plot = pickle.load(open("tests/dummy_files/plot_response.pkl", "rb"))
+    # see current directory    
     plot = pickle.load(open("tests/dummy_files/plot.pkl", "rb"))
     def mock_run_model(*args, **kwargs):
         fake_response = GenerateContentResponse

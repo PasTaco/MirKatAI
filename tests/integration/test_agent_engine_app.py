@@ -89,7 +89,7 @@ def test_agent_query(agent_app: AgentEngineApp) -> None:
     assert len(response["messages"]) > 0, "Response should have at least one message"
 
     # Validate last message is AI response with content
-    message = response["messages"][-1]
+    message = response["messages"]
     kwargs = message["kwargs"]
     assert kwargs["type"] == "ai", "Last message should be AI response"
     assert len(kwargs["content"]) > 0, "AI message content should not be empty"
@@ -146,7 +146,8 @@ def test_agent_plot(agent_app: AgentEngineApp) -> None:
 
     assert len(events) > 0, "Expected at least one chunk in response"
 
-    # Verify each event is a tuple of message and metadata
+    # Verify each event is a tuple of message and metadata and that there is binary image
+    binary_image = False
     for event in events:
         assert isinstance(event, list), "Event should be a list"
         assert len(event) == 2, "Event should contain message and metadata"
@@ -156,6 +157,12 @@ def test_agent_plot(agent_app: AgentEngineApp) -> None:
         assert isinstance(message, dict), "Message should be a dictionary"
         assert message["type"] == "constructor"
         assert "kwargs" in message, "Constructor message should have kwargs"
+        kwargs = message["kwargs"]
+        print(kwargs)
+        assert "content" in kwargs, "Content should be in kwargs"
+        if "binary_image" in kwargs['content']:
+            binary_image = True
+    assert binary_image, "Binary image should be in the message"
 
     # Verify at least one message has content
     has_content = False
@@ -198,6 +205,7 @@ def test_agent_plot_bad_response(agent_app: AgentEngineApp) -> None:
         assert isinstance(message, dict), "Message should be a dictionary"
         assert message["type"] == "constructor"
         assert "kwargs" in message, "Constructor message should have kwargs"
+        assert "binary_image" not in message["kwargs"]['content'], "Binary image should be in kwargs"
 
     # Verify at least one message has content
     has_content = False

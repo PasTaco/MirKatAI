@@ -234,7 +234,6 @@ class PlotNode(node):
             
             buf = io.BytesIO()
             plot.savefig(buf, format='png') # Or another format like 'jpeg'
-            plot.savefig("plot", format='svg')
             buf.seek(0)
             image_base64 = base64.b64encode(buf.read()).decode('utf-8')
             buf.close()
