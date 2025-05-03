@@ -220,7 +220,7 @@ class PlotNode(node):
         messages = state['messages'].content
         queries = SQL_QUERIES # state['table']
 
-        response_plot = self.run_model(str(queries) + "The code to plot, should save the final figure on variable figure." + messages)
+        response_plot = self.run_model(str(queries) + self.instructions + messages)
         
         plotting_tools_instance = PlotFunctons('', response_plot)        
         plot = plotting_tools_instance.handle_response()
@@ -242,7 +242,6 @@ class PlotNode(node):
         return {**state,
                 "messages": AIMessage(content=answer_b),
                 "answer": answer
-            #"messages":state["messages"] + [AIMessage(content=answer)]
             }
     
     
