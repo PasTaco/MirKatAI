@@ -18,6 +18,7 @@ class Instructions(Enum):
     sql='SQL'
     router='ROUTING'
     welcome='WELCOME_MSG'
+    plot='PLOT'
 
    # We don't need to override __init__ or modify self.value
     def get_instruction(self):
@@ -25,5 +26,7 @@ class Instructions(Enum):
             return SystemMessage(content=instructions[f"{self.router.value}_INSTRUCTIONS"]), AIMessage(instructions[self.welcome.value])
         elif self == Instructions.sql:
             return instructions[f"{self.sql.value}_INSTRUCTIONS"]
+        elif self == Instructions.plot:
+            return instructions[f"{self.plot.value}_INSTRUCTIONS"]
         else:
             raise ValueError(f"Unknown instruction type: {self.value}")

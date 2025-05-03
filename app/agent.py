@@ -69,6 +69,7 @@ llm_master = ChatGoogleGenerativeAI(model=LLM)
 
 MIRNA_ASSISTANT_SYSTEM_MESSAGE, WELCOME_MSG = Instructions.router.get_instruction()
 SQL_INSTRUCTIONS = Instructions.sql.get_instruction()
+PLOT_INSTRUCTIONS = Instructions.plot.get_instruction()
 
 ### SQL tables descriptions
 
@@ -137,7 +138,7 @@ config_with_code = types.GenerateContentConfig(
     temperature=0.0,
 )
 
-plotter_model = client.chats.create(model=LLM, config=config_with_code)
+plotter_model = client.chats.create(model=LLM, config=config_with_code, instructions=PLOT_INSTRUCTIONS)
 
 
 
