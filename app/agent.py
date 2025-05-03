@@ -506,7 +506,6 @@ workflow.add_conditional_edges(
    LITERATURE_NODE,
    route_processor_output, # Function to decide based on Literature processor output
    {
-    #    TOOL_NODE: TOOL_NODE,   # Route to execute literature tools (ground_search)
         HUMAN_NODE: HUMAN_NODE,
         CHATBOT_NODE: CHATBOT_NODE, # Route to main chatbot (if needed)
         END : END  # Route to show final literature answer
