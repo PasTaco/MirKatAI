@@ -67,9 +67,7 @@ llm_master = ChatGoogleGenerativeAI(model=LLM)
 
 ###### define instructions for nodes
 
-import sys
-pwd = os.path.dirname(os.path.abspath(__file__))
-print(pwd)
+
 MIRNA_ASSISTANT_SYSTEM_MESSAGE, WELCOME_MSG = Instructions.router.get_instruction()
 SQL_INSTRUCTIONS = Instructions.sql.get_instruction()
 

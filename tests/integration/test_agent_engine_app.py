@@ -17,7 +17,11 @@ import logging
 import pytest
 
 from app.agent_engine_app import AgentEngineApp
-
+import sys
+import os
+current_path = os.path.dirname(os.path.abspath(__file__))
+if current_path.endswith("app"):
+    sys.path.append("../tests")
 
 @pytest.fixture
 def agent_app() -> AgentEngineApp:
