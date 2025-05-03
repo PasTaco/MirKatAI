@@ -52,7 +52,7 @@ class PlotFunctons:
                 return return_workaround
             
             elif img := part.inline_data:
-                st.image(img.data) # TO  BE TESTED!
+                return img.data
 
 
 
