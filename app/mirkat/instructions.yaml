@@ -108,7 +108,11 @@ FORMAT_ANSWER_INSTRUCTIONS: |
       `Always return the result in strict JSON format with no extra explanations.`,
       `If the 'messages' include a line starting with 'binary_image:', preserve it exactly as it is in the final response.`,
       `If the LITERATURE model is the answer source, include the list of references it provides in the final output.`,
-      `Keep follow up instructions as imperative givin all the information needed for the next model to take the task.`
+      `Keep follow up instructions as imperative givin all the information needed for the next model to take the task.`,
+      `If there is a ground search, a sql call or a plot missing, the answer is NO`,
+      `If the original query ask for plots and there is not a binary_image, the answer is NO`,
+      `If the original query ask for a table and there is not a table, the answer is NO`,
+      `If the original query ask for something different to the capabilities of the model, the answer is YES and the result is the reason why the model is not able to do it`,
     ]
   }
   """
