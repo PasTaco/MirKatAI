@@ -103,6 +103,7 @@ class ChatbotNode(node):
             "messages": AIMessage(content=response.content), # Add the router's decision/response
             "answer": answer, # Update answer with the router's response
             "finished": state.get("finished", False), # Use .get for safety
+
         }
         return state
 
@@ -133,7 +134,8 @@ class SQLNode(node):
         print(f"--- Message entering run model: {messages}---")
         text = messages.content
         print (f"--- Message going to the sql model: {text}---")
-        response = self. chat.send_message(text)
+        #response = self. chat.send_message(text)
+        response = AIMessage(content="mir1")
         return response
 
     def get_queries(self, callings):
@@ -145,6 +147,7 @@ class SQLNode(node):
         """The sql llm that will check for the sql questions and get a json file in response."""
 
         print("--- Calling SQL Processor Node ---")
+        print("State: ", state)
         messages = state['messages']
         if not messages:
             # Should ideally not happen if routing is correct
@@ -174,30 +177,18 @@ class SQLNode(node):
         callings = response.automatic_function_calling_history
         queries = self.get_queries(callings)
         SQL_QUERIES.update(queries)
-        #handle_response(response)
-        #response = sql_llm_with_db_tools.invoke([SQL_SYSTEM_INSTRUCTION] + messages)
-        #print(f"--- SQL Processor LLM Response: {response} ---")
+        new_answer = AIMessage(content=response.text)
         
-        
-        new_answer = state.get("answer", "")
-        
-        # if isinstance(response, AIMessage) and response.content and not response.tool_calls:
-        #     print("The response is AIMessage")
-        #     new_answer = response.content # Update answer if it's a direct text response
-        # elif isinstance(response, GenerateContentResponse):
-        #     print("The response is GenerateContentResponse")
-        #     new_answer = response.text
-        # elif isinstance(response, str):
-        #     print("The response is str")
-        #     new_answer = response
-        # new_messages = messages + [AIMessage(content=new_answer)]
-        #print(f"--- Answer from SQL Processor LLM Response: {new_answer} ---")
         return {
             #"messages": response.content,
-            "messages": AIMessage(content="This was the answer from SQL node, please format and give to the user: "+response.text), # Add the router's decision/response
+            "original_query": state["original_query"], # Add the router's decision/response
+            "messages": messages, # Add the router's decision/response
+            "request": AIMessage(content="This was the answer from SQL node, please format and give to the user: "+response.text), # Add the router's decision/response
             "table": queries, # Use .get for safety
             "answer": new_answer, # Return the potentially updated answer
             "finished": state.get("finished", False), # Use .get for safety
+            "answer_source": 'SQL_NODE',
+            "trys": state.get("trys", 0) + 1, # Use .get for safety
         }
 
 
@@ -225,7 +216,7 @@ class PlotNode(node):
         plotting_tools_instance.handle_response()
 
     def get_node(self, state):
-        messages = state['messages'].content
+        messages = state['request'].content
         queries = SQL_QUERIES # state['table']
 
         response_plot = self.run_model(str(queries) + self.instructions + messages)
@@ -248,8 +239,10 @@ class PlotNode(node):
             # response_plot.candidates[0].content.parts[0].text =  f"binary_image: {image_base64}"
             answer_b = answer + f"binary_image: {image_base64}"
         return {**state,
-                "messages": AIMessage(content=answer_b),
-                "answer": answer
+                "messages": messages,
+                "answer": answer,
+                "request": AIMessage(content=answer_b),
+                "answer_source": 'PlotNode',
             }
     
     

@@ -50,7 +50,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 LOCATION = "europe-west1"
 LLM = "gemini-2.0-flash"
-LLM_SQL = "gemini-2.5-flash-preview-04-17"
+LLM_SQL = "gemini-2.5-pro-exp-03-25"
 LLM_PLOT = "gemini-2.5-flash-preview-04-17"
 
 #LLM = "gemini-2.0-flash-lite"
@@ -62,7 +62,7 @@ LLM_PLOT = "gemini-2.5-flash-preview-04-17"
 # istantiate llms for nodes
 
 llm_master = ChatGoogleGenerativeAI(model=LLM)
-
+llm_response = ChatGoogleGenerativeAI(model=LLM)
 
 ###### define instructions for nodes
 
@@ -152,7 +152,10 @@ class GraphState(TypedDict):
     bibliography: list
     research_queries: list
     finished: bool
-    
+    original_query: Optional[HumanMessage]
+    request: Optional[AIMessage]
+    answer_source: Optional[str]
+    trys: int
 
 
 
@@ -192,6 +195,9 @@ def human_node(state: GraphState) -> GraphState:
     #    "answer": state["answer"],
     #    "finished": state["finished"]}
 
+def run_model(message):
+    response = llm_master.invoke(str(MIRNA_ASSISTANT_SYSTEM_MESSAGE) + message)
+    return response
 def chatbot_with_tools(state: GraphState) -> GraphState:
     """The chatbot with tools. A simple wrapper around the model's own chat interface."""
     print("\n--- ENTERING: master_node ---")
@@ -200,30 +206,36 @@ def chatbot_with_tools(state: GraphState) -> GraphState:
     messages = state['messages']
     answer = None
 
-    # Check if this is the very first turn (no messages yet)
-    if not messages:
-        # Generate the welcome message directly
-        print("--- Generating Welcome Message ---")
-        response = AIMessage(content=WELCOME_MSG)
+    if isinstance(messages, AIMessage):
+        print(f"--- Getting response from the network ---")
+        messages = state['request']
+
     else:
+        print(f"--- Getting response from the human ---")
+        orginal_query = messages[-1]
+        print(f"--- Original query: {orginal_query} ---")
         # Normal operation: Invoke the master LLM for routing/response
         print("--- Calling Master Router LLM ---")
         # Always invoke with the system message + current history
         print(f"--- Message going to the llm_master: {messages}---")
         #messages_with_system = [{"type": "system", "content": MIRNA_ASSISTANT_SYSTEM_MESSAGE}] + state["messages"]
-        response = llm_master.invoke(str(MIRNA_ASSISTANT_SYSTEM_MESSAGE) + str(state["messages"]))
+        response = run_model(str(state["messages"]))
         if "***ANSWER_DIRECTLY***" in response.content.strip():
             #response = llm_master.invoke([ORIGINAL_MIRNA_SYSINT_CONTENT_MESSAGE] + messages)
             response.content = response.content.replace("***ANSWER_DIRECTLY***", "")
             answer = response.content
+        messages = response
         print(f"--- Master Router Raw Response: {response.content} ---")
-
+    print(f"Exiting Master Router with response: {response.content}")
     # Update state
     state = state | {
         #"messages": response.content , # Add the router's decision/response
-        "messages": AIMessage(content=response.content), # Add the router's decision/response
+        'messages':  AIMessage(content=response.content),
+        "request": AIMessage(content=response.content), # Add the router's decision/response
         "answer": answer, # Update answer with the router's response
         "finished": state.get("finished", False), # Use .get for safety
+        "original_query": orginal_query, # Add the original query
+        #"trys": state.get("trys", 0) + 1, # Increment the number of tries
     }
     return state
 SQL_QUERIES = {}
@@ -282,12 +294,15 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
     and decides where to route the conversation next.
     """
     print("\n--- ROUTING: route_chatbot_decision ---")
+    print (f"--- Current state: {state} ---")
     messages: List[BaseMessage] = state['messages']
     if not messages:
         #print("--- Routing Error: No messages found in route_chatbot_decision ---")
         return END # Or raise error
-
-    last_message = messages
+    if isinstance(messages, list):
+        last_message = messages[-1]
+    else:
+        last_message = messages
     if not isinstance(last_message, AIMessage) :
         print(f"--- Routing Warning: Expected AIMessage, got {type(last_message)}. Routing to Human. ---")
         #return HUMAN_NODE
@@ -309,15 +324,6 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
     elif "***ANSWER_DIRECTLY***" in content:
         content = content.replace("***ANSWER_DIRECTLY***", "")
         print(f"--- The answer directly was: {content}")
-         #print("--- Routing: Master Router to Human (Direct Answer) ---")
-         # Remove the keyword itself before showing to human
-        #  state['messages'][-1].content = content.replace("***ANSWER_DIRECTLY***", "").strip()
-        #  # If the content is *only* the keyword, maybe add a placeholder?
-        #  #if not state['messages'][-1].content:
-        #  x = state['messages'][-2].content[0]['text']
-        #  print(f"\n\n\n\nThis is the message puto!!!{x}\n\n\n\n")
-        #  #print (f"--- The messages directly was: {x}")
-        #  answer = llm_master.invoke(x) #"Okay, let me answer that." # Or similar
         state['messages'].content = str(content)
         #  #print (f"--- The answer directly was: {answer}")
         state['answer'] = str(content)#.response.candidates[0].content.parts[0].text
@@ -411,15 +417,13 @@ workflow.add_node(PLOT_NODE, plot_node.get_node)
 # 1. Entry Point (Where the graph starts)
 workflow.set_entry_point(CHATBOT_NODE) # Start with a hello input
 
+# Add direct edges
+workflow.add_edge(PLOT_NODE, CHATBOT_NODE)
+workflow.add_edge(SQL_NODE, CHATBOT_NODE)
+workflow.add_edge(LITERATURE_NODE, CHATBOT_NODE)
+workflow.add_edge(HUMAN_NODE,END)
 # 2. From Human Node
-workflow.add_conditional_edges(
-    HUMAN_NODE,
-    route_after_human, # Function to decide next step
-    {
-        CHATBOT_NODE: CHATBOT_NODE, # If function returns "chatbot_with_tools", go there
-        END: END                   # If function returns "__end__", finish
-    }
-)
+
 
 # 3. From Main Chatbot Node
 workflow.add_conditional_edges(
@@ -435,28 +439,6 @@ workflow.add_conditional_edges(
     }
 )
 
-# 4. From SQL Processor Node
-workflow.add_conditional_edges(
-    SQL_NODE,
-    route_processor_output, # Function to decide based on SQL processor output
-    {
-        CHATBOT_NODE: CHATBOT_NODE, # Route to main chatbot (if needed)
-        TOOL_NODE: TOOL_NODE,   # Route to execute SQL tools (query_database)
-        HUMAN_NODE: HUMAN_NODE  # Route to show final SQL answer
-    }
-)
-
-# 5. From Literature Search Node
-workflow.add_conditional_edges(
-   LITERATURE_NODE,
-   route_processor_output, # Function to decide based on Literature processor output
-   {
-        HUMAN_NODE: HUMAN_NODE,
-        CHATBOT_NODE: CHATBOT_NODE, # Route to main chatbot (if needed)
-        END : END  # Route to show final literature answer
-   }
-)
-
 # 6. From Tool Node - Route back to the appropriate processor
 workflow.add_conditional_edges(
     TOOL_NODE,
@@ -469,7 +451,6 @@ workflow.add_conditional_edges(
 )
 
 
-workflow.add_edge(PLOT_NODE, END)
 
 
 

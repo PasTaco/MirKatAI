@@ -38,7 +38,7 @@ from google.genai.client import Client
 from google.genai.chats import Chat
 
 from google.genai.types import GenerateContentResponse
-
+from google.genai.types import Candidate, Content,Part, GenerateContentConfig
 import pickle
 import sys
 import os
@@ -332,7 +332,7 @@ def test_plot_node() -> None:
     assert plot_node.functions == [min, max]
 
 
-from google.genai.types import Candidate, Content,Part, GenerateContentConfig
+
 def test_plot_get_node(monkeypatch) -> None:
     """Check that the node is a responsive llm node"""
     plot_node = PlotNode(instructions="you are a plot expert", functions=[min, max])
@@ -392,11 +392,11 @@ def test_literature_get_node(monkeypatch) -> None:
 def test_sql_get_node(monkeypatch) -> None:
     """Check that the node is a responsive llm node"""
     sql_node = SQLNode(instructions="you are a SQL expert,", functions=[min, max])
-    status = {"messages":AIMessage(content="hi")}
+    status = {"messages":AIMessage(content="Get one microRNA from the databse"), "original_query":[{'type': 'text', 'text': 'tell me one microRNA from the database'}]}
     def mock_run_model(*args, **kwargs):
         fake_response = GenerateContentResponse
         fake_response.automatic_function_calling_history= 'many functions'
-        fake_response.text = "Risotto alla Milanese"
+        fake_response.text = "Mir1"
         fake_response.candidates = [Candidate(content=Content(parts=[Part]))]
         return fake_response
     def mock_get_queries(*args, **kwargs):
@@ -405,4 +405,6 @@ def test_sql_get_node(monkeypatch) -> None:
     monkeypatch.setattr(sql_node, "get_queries", mock_get_queries)
     result = sql_node.get_node(status)
     # check messages is AIMessage
-    assert "This was the answer from SQL node, please format and give to the user:" in result['messages'].content
+    assert "This was the answer from SQL node, please format and give to the user:" in result['request'].content
+    assert result["answer_source"] == "SQL_NODE"
+    assert result["answer"].content == "Mir1"

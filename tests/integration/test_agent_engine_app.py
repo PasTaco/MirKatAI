@@ -358,3 +358,78 @@ def test_agent_sql(agent_app: AgentEngineApp) -> None:
             has_content = True
             break
     assert has_content, "At least one message should have content"
+
+from google.genai.types import Candidate, Content,Part, GenerateContentConfig, GenerateContentResponse
+from app.mirkat.node_constructor import SQLNode 
+from langchain_core.messages import ( # Grouped message types
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage
+    # ToolMessage is implicitly handled by LangGraph/ToolNode
+)
+from app import agent
+
+def test_agent_sql_no_model(agent_app: AgentEngineApp, monkeypatch) -> None:
+    """
+    Integration test for the agent stream query functionality.
+    Tests that the agent returns valid streaming responses.
+    """
+
+    def mock_run_model_sql(*args, **kwargs):
+        fake_response = GenerateContentResponse
+        fake_response.automatic_function_calling_history= 'many functions'
+        fake_response.text = "Mir1"
+        fake_response.candidates = [Candidate(content=Content(parts=[Part]))]
+        return fake_response
+    def mock_run_model_master(*args, **kwargs):
+        fake_response = AIMessage(content="***ROUTE_TO_SQL*** Select one arbitrary microRNA ID from the database")
+        return fake_response
+    def mock_get_queries(*args, **kwargs):
+        return {"query":"select * from table"}
+    
+    monkeypatch.setattr(SQLNode, "run_model", mock_run_model_sql)
+    monkeypatch.setattr(SQLNode, "get_queries", mock_get_queries)
+    monkeypatch.setattr(agent, "run_model", mock_run_model_master)
+
+    input_dict = {
+        "messages": [
+            {"type": "human", "content":
+              "Get one microRNA from the database.\n"},
+        ],
+        "table": None,
+        "answer": None,
+        "finished": False,
+        "user_id": "test-user",
+        "session_id": "test-session",
+    }
+
+    events = list(agent_app.stream_query(input=input_dict))
+
+    assert len(events) > 0, "Expected at least one chunk in response"
+    sql_exists = False
+    # Verify each event is a tuple of message and metadata and that there is binary image
+    for event in events:
+        assert isinstance(event, list), "Event should be a list"
+        assert len(event) == 2, "Event should contain message and metadata"
+        message, _ = event
+
+        # Verify message structure
+        assert isinstance(message, dict), "Message should be a dictionary"
+        assert message["type"] == "constructor"
+        assert "kwargs" in message, "Constructor message should have kwargs"
+        assert "content" in kwargs, "Content should be in kwargs"
+        kwargs = message["kwargs"]
+        if "Mir1" in kwargs['content']:
+            sql_exists = True
+        print(kwargs)
+        
+    assert sql_exists, "SQL query should be in the message"
+    # Verify at least one message has content
+    has_content = False
+    for event in events:
+        message = event[0]
+        if message.get("type") == "constructor" and "content" in message["kwargs"]:
+            has_content = True
+            break
+    assert has_content, "At least one message should have content"

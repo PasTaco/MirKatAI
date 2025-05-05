@@ -19,6 +19,7 @@ class Instructions(Enum):
     router='ROUTING'
     welcome='WELCOME_MSG'
     plot='PLOT'
+    format_answer='FORMAT_ANSWER'
 
    # We don't need to override __init__ or modify self.value
     def get_instruction(self):
