@@ -203,7 +203,11 @@ def run_model(message):
 def is_compleated(response, original_query, message,answer_source):
     """Check if the response is complete."""
     # Check if the response contains a SQL query
-    message_eval = {'answer': response, 'original_query': original_query.content, "message": message.content, "answer_source": answer_source}
+    if isinstance(original_query, str):
+        original_query = original_query
+    else:
+        original_query = original_query.content
+    message_eval = {'answer': response, 'original_query': original_query, "message": message.content, "answer_source": answer_source}
     message_str = str(message_eval)
     response = llm_response.invoke( str(MIRNA_COMPLETE_ANSWER)+ message_str)
     return response
