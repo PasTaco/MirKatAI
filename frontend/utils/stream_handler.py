@@ -218,10 +218,10 @@ class EventProcessor:
         # Set run_id in session state at start of processing
         self.st.session_state["run_id"] = self.current_run_id
 
-        # --- Clear previous output before starting stream --- # ADDED
-        self.stream_handler.container.empty()                 # ADDED
-        self.stream_handler.tool_expander.empty()              # ADDED
-        # ---------------------------------------------------- # ADDED
+        # --- Clear previous output before starting stream ---
+        self.stream_handler.container.empty()
+        self.stream_handler.tool_expander.empty()
+        # ----------------------------------------------------
 
         stream = self.client.stream_messages(
             data={
@@ -263,23 +263,53 @@ class EventProcessor:
 
                     # Handle AI responses - Accumulate content but DON'T display yet
                     elif content := message.get("content"):
-                        if isinstance(content, list): # ADDED BLOCK
-                            # Handle potential list content if necessary, maybe join?
+                        if isinstance(content, list):
                              print(f"Received list of content parts: {content}")
-                             # Simple joining strategy:
                              self.final_content += "".join(str(part) for part in content)
                         else:
                             self.final_content += content
-                        # self.stream_handler.new_token(content) # DO NOT DISPLAY YET - CHANGED (Commented out)
+                        # (Streaming display commented out as per previous request)
 
 
-        # --- Handle end of stream: Now display the final collected content --- # ADDED BLOCK START
+        # --- Handle end of stream: Now display the final collected content ---
         if self.final_content:
-            # Display final AI message in the main container
-            self.stream_handler.container.markdown(format_content(self.final_content), unsafe_allow_html=True)
+            # ---- START: Added JSON parsing logic ----
+            display_content = self.final_content # Default to the full content
+            try:
+                # Attempt to find and parse JSON within the final content
+                # Handle potential markdown fences like ```json\n{...}\n```
+                json_part = self.final_content
+                if json_part.strip().startswith("```json"):
+                    json_part = json_part.split("```json", 1)[1]
+                elif json_part.strip().startswith("json\n"):
+                     json_part = json_part.split("json\n", 1)[1]
 
+                # Find the start and end of the JSON object
+                start_index = json_part.find('{')
+                end_index = json_part.rfind('}')
+                if start_index != -1 and end_index != -1 and end_index > start_index:
+                    json_str = json_part[start_index : end_index + 1]
+                    parsed_json = json.loads(json_str)
+                    if "return" in parsed_json:
+                        display_content = parsed_json["return"]
+                    else:
+                         print("Parsed JSON, but 'return' key not found. Displaying full content.")
+                else:
+                     print("Could not find valid JSON object delimiters {}. Displaying full content.")
+
+            except json.JSONDecodeError:
+                print(f"Final content is not valid JSON or couldn't parse relevant part. Displaying full content.")
+            except Exception as e:
+                print(f"An unexpected error occurred during JSON parsing: {e}. Displaying full content.")
+             # --- END: Added JSON parsing logic ---
+
+            # Display the potentially extracted 'return' value or the full content
+            # Use the 'display_content' variable here
+            self.stream_handler.container.markdown(format_content(display_content), unsafe_allow_html=True) # MODIFIED LINE
+
+            # IMPORTANT: Store the ORIGINAL full final_content in the message history
             final_message = AIMessage(
-                content=self.final_content,
+                content=self.final_content, # Use original self.final_content here
                 id=self.current_run_id,
                 additional_kwargs=self.additional_kwargs,
             ).model_dump()
@@ -292,36 +322,31 @@ class EventProcessor:
             self.st.session_state.run_id = self.current_run_id # Ensure run_id is set
 
             # Display tool calls summary in the expander (optional)
+            # (Code for displaying tool calls remains the same as before)
             if self.tool_calls:
                 tool_log_str = ""
                 for tool_call_msg in self.tool_calls:
-                    # Check if it's the AI message initiating the call
                     if tc_list := tool_call_msg.get("tool_calls"):
                         for tc in tc_list:
-                             # Ensure 'name' and 'args' exist before accessing
                             name = tc.get('name', 'Unknown Tool')
                             args = tc.get('args', {})
                             tool_log_str += f"\n\nCalling tool: `{name}` with args: `{json.dumps(args)}`"
-                    # Check if it's the ToolMessage response
                     elif tool_call_msg.get("tool_call_id"):
                         tool_content = tool_call_msg.get("content", "No content in response")
                         tool_log_str += f"\n\nTool response: `{tool_content}`"
-
-                if tool_log_str: # Only display if there's something to show
+                if tool_log_str:
                     self.stream_handler.tool_expander.markdown(tool_log_str.strip())
-                    # Optionally expand the expander if there were tool calls
-                    # self.stream_handler.tool_expander.expanded = True # Uncomment if you want it expanded by default
-        else: # ADDED ELSE BLOCK
-            # Handle cases where there might be no final text content (e.g., only tool calls)
+
+        else:
+            # Handle cases where there might be no final text content
             self.stream_handler.container.markdown("*No text content returned.*")
-             # Still update session state with tool calls if any
             if self.tool_calls:
                 session = self.st.session_state["session_id"]
                 self.st.session_state.user_chats[session]["messages"] = (
                     self.st.session_state.user_chats[session]["messages"] + self.tool_calls
                 )
-                 # Display tool calls summary
-                tool_log_str = "" # Recalculate or use previously calculated string if needed
+                # (Display tool calls summary as before)
+                tool_log_str = ""
                 for tool_call_msg in self.tool_calls:
                      if tc_list := tool_call_msg.get("tool_calls"):
                          for tc in tc_list:
@@ -334,10 +359,9 @@ class EventProcessor:
                 if tool_log_str:
                     self.stream_handler.tool_expander.markdown(tool_log_str.strip())
 
-            self.st.session_state.run_id = self.current_run_id # Ensure run_id is set even if no content
-        # --- ADDED BLOCK END ---
+            self.st.session_state.run_id = self.current_run_id # Ensure run_id is set
 
-        
+
 def get_chain_response(st: Any, client: Client, stream_handler: StreamHandler) -> None:
     """Process the chain response update the Streamlit UI.
 
