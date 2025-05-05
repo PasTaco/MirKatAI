@@ -413,13 +413,13 @@ def test_agent_sql_no_model(agent_app: AgentEngineApp, monkeypatch) -> None:
         assert isinstance(event, list), "Event should be a list"
         assert len(event) == 2, "Event should contain message and metadata"
         message, _ = event
-
+        print(message)
         # Verify message structure
         assert isinstance(message, dict), "Message should be a dictionary"
         assert message["type"] == "constructor"
         assert "kwargs" in message, "Constructor message should have kwargs"
-        assert "content" in kwargs, "Content should be in kwargs"
         kwargs = message["kwargs"]
+        assert "content" in kwargs, "Content should be in kwargs"
         if "Mir1" in kwargs['content']:
             sql_exists = True
         print(kwargs)

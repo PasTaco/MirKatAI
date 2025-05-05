@@ -17,6 +17,7 @@ from app.mirkat.sql_functions import (
     MySqlConnection,
     DBTools
 )
+import re
 from app.mirkat.literature_functions import LiteratureTools
 from app.mirkat.plot_functions import PlotFunctons
 
@@ -39,7 +40,7 @@ import google.ai.generativelanguage as genai_types
 import base64
 import io
 ## load env variables and set up gemini API key:
-
+import json
 from dotenv import load_dotenv
 from app.mirkat.node_constructor import (PlotNode, SQLNode,LiteratureNode)
 # Load .env file
@@ -68,6 +69,7 @@ llm_response = ChatGoogleGenerativeAI(model=LLM)
 
 
 MIRNA_ASSISTANT_SYSTEM_MESSAGE, WELCOME_MSG = Instructions.router.get_instruction()
+MIRNA_COMPLETE_ANSWER = Instructions.format_answer.get_instruction()
 SQL_INSTRUCTIONS = Instructions.sql.get_instruction()
 PLOT_INSTRUCTIONS = Instructions.plot.get_instruction()
 
@@ -198,36 +200,58 @@ def human_node(state: GraphState) -> GraphState:
 def run_model(message):
     response = llm_master.invoke(str(MIRNA_ASSISTANT_SYSTEM_MESSAGE) + message)
     return response
+def is_compleated(response, original_query, message,answer_source):
+    """Check if the response is complete."""
+    # Check if the response contains a SQL query
+    message_eval = {'answer': response, 'original_query': original_query.content, "message": message.content, "answer_source": answer_source}
+    message_str = str(message_eval)
+    response = llm_response.invoke( str(MIRNA_COMPLETE_ANSWER)+ message_str)
+    return response
 def chatbot_with_tools(state: GraphState) -> GraphState:
     """The chatbot with tools. A simple wrapper around the model's own chat interface."""
     print("\n--- ENTERING: master_node ---")
 
-    
+
     messages = state['messages']
     answer = None
-
+    orginal_query = state.get("original_query", None)
+    compleate = False
     if isinstance(messages, AIMessage):
         print(f"--- Getting response from the network ---")
-        messages = state['request']
-
+        response = state['request'].content
+        answer_source = state.get("answer_source", None)
+        is_compleate = is_compleated(response=response, 
+                                    original_query=orginal_query,
+                                      message=messages, answer_source=answer_source
+                                      )
+        cleaned = re.sub(r"^```json\s*|\s*```$", "", is_compleate.content.strip())
+        dict_answer = json.loads(cleaned)
+        answer = dict_answer.get("answer")
+        returned_answer = dict_answer.get("return")
+        
+        compleate = answer == "YES"
+        messages =  AIMessage(content=returned_answer) 
+        response = AIMessage(content=returned_answer)   
     else:
         print(f"--- Getting response from the human ---")
         orginal_query = messages[-1]
+    if not compleate:
+            
         print(f"--- Original query: {orginal_query} ---")
         # Normal operation: Invoke the master LLM for routing/response
         print("--- Calling Master Router LLM ---")
         # Always invoke with the system message + current history
         print(f"--- Message going to the llm_master: {messages}---")
         #messages_with_system = [{"type": "system", "content": MIRNA_ASSISTANT_SYSTEM_MESSAGE}] + state["messages"]
-        response = run_model(str(state["messages"]))
+        response = run_model(str(messages))
         if "***ANSWER_DIRECTLY***" in response.content.strip():
             #response = llm_master.invoke([ORIGINAL_MIRNA_SYSINT_CONTENT_MESSAGE] + messages)
             response.content = response.content.replace("***ANSWER_DIRECTLY***", "")
             answer = response.content
         messages = response
         print(f"--- Master Router Raw Response: {response.content} ---")
-    print(f"Exiting Master Router with response: {response.content}")
-    # Update state
+        print(f"Exiting Master Router with response: {response.content}")
+        # Update state
     state = state | {
         #"messages": response.content , # Add the router's decision/response
         'messages':  AIMessage(content=response.content),
@@ -333,12 +357,8 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
         #print("---- Routing to plot node ----")
         return PLOT_NODE
     else:
-         # Assume it's a direct answer or clarification question if no keyword is found
-         #print("--- Routing: Master Router to Human (Direct Answer) ---")
-         # Remove potential keywords just in case they were missed but shouldn't be shown
-         state['messages'].content = content.replace("***ROUTE_TO_SQL***", "").replace("***ROUTE_TO_LITERATURE***", "").replace("***FINISH***", "").replace("***ANSWER_DIRECTLY***", "").strip()
-         print(f"\n\n\n BEFORE CALLING HUMAN NODE  (2) \n\n\n\n")
-         return HUMAN_NODE
+        print(f"\n\n\n BEFORE ENDING \n\n\n\n")
+        return END
 
 # Router 3: After a Specialist Processor Node (`sql_processor_node`, `literature_search_node`)
 def route_processor_output(state: GraphState) -> Literal["chatbot_router","human_node", "__end__"]:

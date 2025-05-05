@@ -134,8 +134,7 @@ class SQLNode(node):
         print(f"--- Message entering run model: {messages}---")
         text = messages.content
         print (f"--- Message going to the sql model: {text}---")
-        #response = self. chat.send_message(text)
-        response = AIMessage(content="mir1")
+        response = self. chat.send_message(text)
         return response
 
     def get_queries(self, callings):

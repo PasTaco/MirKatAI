@@ -30,4 +30,6 @@ class Instructions(Enum):
         elif self == Instructions.plot:
             return instructions[f"{self.plot.value}_INSTRUCTIONS"]
         else:
-            raise ValueError(f"Unknown instruction type: {self.value}")
+            return instructions[f"{self.value}_INSTRUCTIONS"]
+        #else:
+        #    raise ValueError(f"Unknown instruction type: {self.value}")
