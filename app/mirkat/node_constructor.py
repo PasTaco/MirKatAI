@@ -1,3 +1,4 @@
+from altair import Chart
 from langchain_core.messages import ( 
     AIMessage
     )
@@ -229,14 +230,17 @@ class PlotNode(node):
                 answer = answer + f"{part.text}\n"
         answer_b = answer
         if plot:
-            
             buf = io.BytesIO()
-            plot.savefig(buf, format='png') # Or another format like 'jpeg'
+            if not isinstance(plot, Chart):
+                plot.savefig(buf, format='png') # Or another format like 'jpeg'
+            elif isinstance(plot, Chart):
+                plot.save(buf, format='json')
             buf.seek(0)
             image_base64 = base64.b64encode(buf.read()).decode('utf-8')
             buf.close()
             # response_plot.candidates[0].content.parts[0].text =  f"binary_image: {image_base64}"
             answer_b = answer + f"binary_image: {image_base64}"
+            
         return {**state,
                 "messages": messages,
                 "answer": answer,
