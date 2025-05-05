@@ -51,7 +51,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 LOCATION = "europe-west1"
 LLM = "gemini-2.0-flash"
-LLM_SQL = "gemini-2.5-pro-exp-03-25"
+LLM_SQL = "gemini-2.5-flash-preview-04-17"
 LLM_PLOT = "gemini-2.5-flash-preview-04-17"
 
 #LLM = "gemini-2.0-flash-lite"
