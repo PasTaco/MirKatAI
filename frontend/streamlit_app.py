@@ -35,9 +35,8 @@ from frontend.utils.stream_handler import Client, StreamHandler, get_chain_respo
 from app.mirkat.instructions import Instructions
 
 from PIL import Image
-# USER = "my_user"
 EMPTY_CHAT_NAME = "Empty chat"
-MIRNA_ASSISTANT_SYSTEM_MESSAGE, WELCOME_MSG = Instructions.router.get_instruction()
+_, WELCOME_MSG = Instructions.router.get_instruction()
 
 
 
@@ -88,7 +87,6 @@ def initialize_session_state() -> None:
         st.session_state["session_id"] = str(uuid.uuid4())
         st.session_state.uploader_key = 0
         st.session_state.run_id = None
-        # st.session_state.user_id = USER
         st.session_state["gcs_uris_to_be_sent"] = ""
         st.session_state.modified_prompt = None
         st.session_state.session_db = LocalChatMessageHistory(
