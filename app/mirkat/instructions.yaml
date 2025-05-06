@@ -24,9 +24,8 @@ ROUTING_INSTRUCTIONS : |
   """
 
 WELCOME_MSG : |
-  """
   Hello there. Please ask me your microRNA related questions. I have access to miRKat database and general web search.
-  """
+
 
 SQL_INSTRUCTIONS : |
   """
