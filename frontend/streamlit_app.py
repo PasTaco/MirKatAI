@@ -32,10 +32,14 @@ from frontend.utils.local_chat_history import LocalChatMessageHistory
 from frontend.utils.message_editing import MessageEditing
 from frontend.utils.multimodal_utils import format_content, get_parts_from_files
 from frontend.utils.stream_handler import Client, StreamHandler, get_chain_response
+from app.mirkat.instructions import Instructions
 
 from PIL import Image
-USER = "my_user"
 EMPTY_CHAT_NAME = "Empty chat"
+_, WELCOME_MSG = Instructions.router.get_instruction()
+
+
+
 
 
 def setup_page() -> None:
@@ -46,11 +50,24 @@ def setup_page() -> None:
         initial_sidebar_state="auto",
         menu_items=None,
     )
+
+
+    # Ask for username only if not already stored
+    if 'user_id' not in st.session_state:
+        user_input = st.text_input("Enter your username")
+        if user_input:
+            st.session_state.user_id = user_input
+            st.rerun()  # forces rerun with user_id now set
+        else:
+            st.stop()  # stop further execution until user enters input
+
+
+
     # Load SVG logo
     logo = Image.open("frontend/assets/MiRkatAI.png")
     st.markdown(
         """
-        <div style="display: flex; align-items: center; gap: 10px; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 10px;">
         """,
         unsafe_allow_html=True
     )
@@ -60,6 +77,9 @@ def setup_page() -> None:
     with col2:
         st.markdown("## MirKatAI")
 
+    # Once user_id is set
+    st.markdown(WELCOME_MSG.content)
+
 
 def initialize_session_state() -> None:
     """Initialize the session state with default values."""
@@ -67,7 +87,6 @@ def initialize_session_state() -> None:
         st.session_state["session_id"] = str(uuid.uuid4())
         st.session_state.uploader_key = 0
         st.session_state.run_id = None
-        st.session_state.user_id = USER
         st.session_state["gcs_uris_to_be_sent"] = ""
         st.session_state.modified_prompt = None
         st.session_state.session_db = LocalChatMessageHistory(
