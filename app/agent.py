@@ -198,75 +198,7 @@ def human_node(state: GraphState) -> GraphState:
     #    "answer": state["answer"],
     #    "finished": state["finished"]}
 
-def run_model(message):
-    response = llm_master.invoke(str(MIRNA_ASSISTANT_SYSTEM_MESSAGE) + message)
-    return response
-def is_compleated(response, original_query, message,answer_source):
-    """Check if the response is complete."""
-    # Check if the response contains a SQL query
-    if isinstance(original_query, str):
-        original_query = original_query
-    else:
-        original_query = original_query.content
-    message_eval = {'answer': response, 'original_query': original_query, "message": message.content, "answer_source": answer_source}
-    message_str = str(message_eval)
-    response = llm_response.invoke( str(MIRNA_COMPLETE_ANSWER)+ message_str)
-    return response
-def chatbot_with_tools(state: GraphState) -> GraphState:
-    """The chatbot with tools. A simple wrapper around the model's own chat interface."""
-    print("\n--- ENTERING: master_node ---")
 
-
-    messages = state['messages']
-    answer = None
-    orginal_query = state.get("original_query", None)
-    compleate = False
-    if isinstance(messages, AIMessage):
-        print(f"--- Getting response from the network ---")
-        response = state['request'].content
-        answer_source = state.get("answer_source", None)
-        is_compleate = is_compleated(response=response, 
-                                    original_query=orginal_query,
-                                      message=messages, answer_source=answer_source
-                                      )
-        cleaned = re.sub(r"^```json\s*|\s*```$", "", is_compleate.content.strip())
-        dict_answer = json.loads(cleaned)
-        answer = dict_answer.get("answer")
-        returned_answer = dict_answer.get("return")
-        
-        compleate = answer == "YES"
-        messages =  AIMessage(content=returned_answer) 
-        response = AIMessage(content=returned_answer)   
-    else:
-        print(f"--- Getting response from the human ---")
-        orginal_query = messages[-1]
-    if not compleate:
-            
-        print(f"--- Original query: {orginal_query} ---")
-        # Normal operation: Invoke the master LLM for routing/response
-        print("--- Calling Master Router LLM ---")
-        # Always invoke with the system message + current history
-        print(f"--- Message going to the llm_master: {messages}---")
-        #messages_with_system = [{"type": "system", "content": MIRNA_ASSISTANT_SYSTEM_MESSAGE}] + state["messages"]
-        response = run_model(str(messages))
-        if "***ANSWER_DIRECTLY***" in response.content.strip():
-            #response = llm_master.invoke([ORIGINAL_MIRNA_SYSINT_CONTENT_MESSAGE] + messages)
-            response.content = response.content.replace("***ANSWER_DIRECTLY***", "")
-            answer = response.content
-        messages = response
-        print(f"--- Master Router Raw Response: {response.content} ---")
-        print(f"Exiting Master Router with response: {response.content}")
-        # Update state
-    state = state | {
-        #"messages": response.content , # Add the router's decision/response
-        'messages':  AIMessage(content=response.content),
-        "request": AIMessage(content=response.content), # Add the router's decision/response
-        "answer": answer, # Update answer with the router's response
-        "finished": state.get("finished", False), # Use .get for safety
-        "original_query": orginal_query, # Add the original query
-        #"trys": state.get("trys", 0) + 1, # Increment the number of tries
-    }
-    return state
 SQL_QUERIES = {}
     
 
