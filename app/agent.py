@@ -42,7 +42,7 @@ import io
 ## load env variables and set up gemini API key:
 import json
 from dotenv import load_dotenv
-from app.mirkat.node_constructor import (PlotNode, SQLNode,LiteratureNode)
+from app.mirkat.node_constructor import (PlotNode, SQLNode,LiteratureNode, ChatbotNode)
 # Load .env file
 load_dotenv()
 
@@ -50,6 +50,7 @@ load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 LOCATION = "europe-west1"
+LLM_ROUTE = "gemini-1.5-flash"
 LLM = "gemini-2.0-flash"
 LLM_SQL = "gemini-2.5-flash-preview-04-17"
 LLM_PLOT = "gemini-2.5-flash-preview-04-17"
@@ -270,7 +271,7 @@ SQL_QUERIES = {}
     
 
 
-
+master_node = ChatbotNode(llm=LLM, instructions=MIRNA_ASSISTANT_SYSTEM_MESSAGE)
 literature_search_node = LiteratureNode(llm=LLM, functions=LiteratureTools)
 plot_node = PlotNode(llm=LLM_PLOT, instructions=PLOT_INSTRUCTIONS)
 sql_node = SQLNode(llm=LLM_SQL, instructions=SQL_INSTRUCTIONS, functions=db_tools)
@@ -316,7 +317,7 @@ def route_after_human(state: GraphState) -> Literal["chatbot_router", "__end__"]
         return CHATBOT_NODE
 
 # Router 2: After the Main Chatbot/Router (`chatbot_with_tools`)
-def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "literature_search_node","human_node", "__end__"]:
+def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "literature_search_node","human_node", "chatbot_router",  "__end__"]:
     """
     Inspects the last message from the main chatbot (`chatbot_with_tools`)
     and decides where to route the conversation next.
@@ -339,6 +340,7 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
         content = last_message.content.strip()
     
     # Check for routing keywords first
+    
     if "***ROUTE_TO_SQL***" in content:
         print("--- Routing: Master Router to SQL Processor ---")
         return SQL_NODE
@@ -346,9 +348,12 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
         #print("--- Routing: Master Router to Literature Searcher ---")
         # state['messages'][-1].content = "Okay, I need to search the literature for that."
         return LITERATURE_NODE
-    elif "***FINISH***" in content or state.get("finished"): # Check flag too
-        #print("--- Routing: Master Router to END ---")
-        return END
+    elif "***PLOT***" in content:
+        #print("---- Routing to plot node ----")
+        return PLOT_NODE
+    elif "PROPOSED_ANSWER" in content:
+        return CHATBOT_NODE 
+    
     elif "***ANSWER_DIRECTLY***" in content:
         content = content.replace("***ANSWER_DIRECTLY***", "")
         print(f"--- The answer directly was: {content}")
@@ -357,9 +362,9 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
         state['answer'] = str(content)#.response.candidates[0].content.parts[0].text
         print(f"\n\n\n BEFORE CALLING HUMAN NODE \n\n\n\n")
         return HUMAN_NODE
-    elif "***PLOT***" in content:
-        #print("---- Routing to plot node ----")
-        return PLOT_NODE
+    elif "***FINISH***" in content or state.get("finished"): # Check flag too
+        #print("--- Routing: Master Router to END ---")
+        return END
     else:
         print(f"\n\n\n BEFORE ENDING \n\n\n\n")
         return END
@@ -429,7 +434,7 @@ workflow = StateGraph(GraphState)
 
 # Add Nodes
 workflow.add_node(HUMAN_NODE, human_node)
-workflow.add_node(CHATBOT_NODE, chatbot_with_tools)
+workflow.add_node(CHATBOT_NODE, master_node.get_node)
 workflow.add_node(SQL_NODE, sql_node.get_node)
 workflow.add_node(LITERATURE_NODE, literature_search_node.get_node)
 workflow.add_node(TOOL_NODE, tool_node)
@@ -459,6 +464,7 @@ workflow.add_conditional_edges(
         TOOL_NODE: TOOL_NODE,               # Route to execute chatbot's tools (get_menu)
         HUMAN_NODE: HUMAN_NODE,             # Route to show chatbot's direct answer
         PLOT_NODE: PLOT_NODE,              # Route to plot node
+        CHATBOT_NODE: CHATBOT_NODE,         # Route back to chatbot for further processing
         END: END                           # Route to end (though usually handled via human)
     }
 )
@@ -473,9 +479,6 @@ workflow.add_conditional_edges(
         HUMAN_NODE: HUMAN_NODE # Fallback route
     }
 )
-
-
-
 
 
 # define state

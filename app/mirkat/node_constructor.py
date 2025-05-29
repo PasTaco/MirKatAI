@@ -12,7 +12,9 @@ from app.mirkat.plot_functions import PlotFunctons
 import base64
 import io
 from app.mirkat.global_variables import SQL_QUERIES
-
+from app.mirkat.instructions import Instructions
+import re
+import json
 # Load .env file
 load_dotenv()
 
@@ -57,9 +59,14 @@ class HumanNode(node):
 
 
 class ChatbotNode(node):
-    def __init__(self, llm=None, instructions=None, functions=None, welcome=None):
+    def __init__(self, llm=None, instructions=None, functions=None, welcome=None, complete_answer=None, limit_trys=3):
         super().__init__(llm, instructions, functions, welcome)
         self.llm_master=ChatGoogleGenerativeAI(model=self.llm)
+        if complete_answer:
+            self.complete_answer = complete_answer
+        else:
+            self.complete_answer = Instructions.format_answer.get_instruction()
+        self.limit_trys = limit_trys
 
     def set_model(self, model):
         self.llm_master = ChatGoogleGenerativeAI(model=model)
@@ -69,42 +76,81 @@ class ChatbotNode(node):
         #print(f"--- Message going to the llm_master: {messages}---")
         response = self.llm_master.invoke(messages)
         return response
+    def run_model_for_compleatness(self, message_str):
+        """Run the model to check if the answer is complete."""
+        response = self.llm_master.invoke( str(self.complete_answer)+ message_str)
+        return response
     
-    def get_node(self,state):
+    def is_compleated(self, response, original_query, message,answer_source, trys):
+        """Check if the response is complete."""
+        # Check if the response contains a SQL query
+        if isinstance(original_query, str):
+            original_query = original_query
+        else:
+            original_query = original_query.content
+        message_eval = {'answer': response, 'original_query': original_query, "message": message.content, "answer_source": answer_source, "trys": trys, "try_limit": self.limit_trys}
+        message_str = str(message_eval)
+        is_compleate = self.run_model_for_compleatness(message_str)
+        cleaned = re.sub(r"^```json\s*|\s*```$", "", is_compleate.content.strip())
+        return json.loads(cleaned)
+
+        
+
+    def get_node(self, state):
         """The chatbot with tools. A simple wrapper around the model's own chat interface."""
         print("\n--- ENTERING: master_node ---")
-        # Get the model
-        
         messages = state['messages']
         answer = None
+        orginal_query = state.get("original_query", None)
+        compleate = False
+        trys = state.get("trys", 0)
+        if isinstance(messages, AIMessage) and trys > 0:
+            print(f"--- Getting response from the network ---")
+            response = state['request'].content
+            answer_source = state.get("answer_source", None)
+            dict_answer = self.is_compleated(response=response, 
+                                        original_query=orginal_query,
+                                        message=messages, answer_source=answer_source, trys=trys
+                                        )
 
-        # Check if this is the very first turn (no messages yet)
-        if not messages:
-            # Generate the welcome message directly
-            print("--- Generating Welcome Message ---")
-            if not self.welcome:
-                self.welcome = "Welcome to the chatbot! How can I assist you today?"
-            response = AIMessage(content=self.welcome)
+            answer = dict_answer.get("answer")
+            returned_answer = dict_answer.get("return")
+            compleate = answer == "YES"
+            if compleate:
+                returned_answer = "***FINISH***" + returned_answer
+            messages =  AIMessage(content=returned_answer) 
+            response = AIMessage(content=returned_answer)
         else:
+            print(f"--- Getting response from the human ---")
+            orginal_query = messages[-1]
+
+        if not compleate and trys < self.limit_trys:
+                
+            print(f"--- Original query: {orginal_query} ---")
             # Normal operation: Invoke the master LLM for routing/response
             print("--- Calling Master Router LLM ---")
             # Always invoke with the system message + current history
             print(f"--- Message going to the llm_master: {messages}---")
             #messages_with_system = [{"type": "system", "content": MIRNA_ASSISTANT_SYSTEM_MESSAGE}] + state["messages"]
-            response = self.run_model(str(self.instructions) + str(state["messages"]))
-            if "***ANSWER_DIRECTLY***" in response.content.strip():
+            response = self.run_model(str(messages))
+            #if "***ANSWER_DIRECTLY***" in response.content.strip():
                 #response = llm_master.invoke([ORIGINAL_MIRNA_SYSINT_CONTENT_MESSAGE] + messages)
-                response.content = response.content.replace("***ANSWER_DIRECTLY***", "")
-                answer = response.content
+            #    response.content = response.content.replace("***ANSWER_DIRECTLY***", "")
+            #    answer = response.content
+            messages = response
             print(f"--- Master Router Raw Response: {response.content} ---")
-
-        # Update state
+            print(f"Exiting Master Router with response: {response.content}")
+            response.content = "***PROPOSED_ANSWER***" + response.content
+            print(f"--- Master Router Response: {response.content} ---")
+            # Update state
         state = state | {
             #"messages": response.content , # Add the router's decision/response
-            "messages": AIMessage(content=response.content), # Add the router's decision/response
+            'messages':  AIMessage(content=response.content),
+            "request": AIMessage(content=response.content), # Add the router's decision/response
             "answer": answer, # Update answer with the router's response
             "finished": state.get("finished", False), # Use .get for safety
-
+            "original_query": orginal_query, # Add the original query
+            "trys": trys + 1, # Increment the number of tries
         }
         return state
 
