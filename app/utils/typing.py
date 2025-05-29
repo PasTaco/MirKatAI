@@ -58,6 +58,10 @@ class InputChat(BaseModel):
         0,
         description="The number of attempts made to generate an answer.",
     )
+    history: list | None = Field(
+        None,
+        description="The history of messages.",
+    )
     
 
 

@@ -81,14 +81,14 @@ class ChatbotNode(node):
         response = self.llm_master.invoke( str(self.complete_answer)+ message_str)
         return response
     
-    def is_compleated(self, response, original_query, message,answer_source, trys):
+    def is_compleated(self, response, original_query, message,answer_source, trys, history = []):
         """Check if the response is complete."""
         # Check if the response contains a SQL query
         if isinstance(original_query, str):
             original_query = original_query
         else:
             original_query = original_query.content
-        message_eval = {'answer': response, 'original_query': original_query, "message": message.content, "answer_source": answer_source, "trys": trys, "try_limit": self.limit_trys}
+        message_eval = {'answer': response, 'original_query': original_query, "message": message.content, "answer_source": answer_source, "trys": trys, "try_limit": self.limit_trys, "history": history}
         message_str = str(message_eval)
         is_compleate = self.run_model_for_compleatness(message_str)
         cleaned = re.sub(r"^```json\s*|\s*```$", "", is_compleate.content.strip())
@@ -103,26 +103,31 @@ class ChatbotNode(node):
         answer = None
         orginal_query = state.get("original_query", None)
         compleate = False
+        history = state.get("history", [])
         trys = state.get("trys", 0)
+        finished = state.get("finished", False)
         if isinstance(messages, AIMessage) and trys > 0:
             print(f"--- Getting response from the network ---")
             response = state['request'].content
             answer_source = state.get("answer_source", None)
             dict_answer = self.is_compleated(response=response, 
                                         original_query=orginal_query,
-                                        message=messages, answer_source=answer_source, trys=trys
+                                        message=messages, answer_source=answer_source, trys=trys, history=history
                                         )
 
             answer = dict_answer.get("answer")
             returned_answer = dict_answer.get("return")
             compleate = answer == "YES"
             if compleate:
-                returned_answer = "***FINISH***" + returned_answer
+                #returned_answer = "***FINISH***" + returned_answer
+                finished = True
             messages =  AIMessage(content=returned_answer) 
             response = AIMessage(content=returned_answer)
         else:
             print(f"--- Getting response from the human ---")
             orginal_query = messages[-1]
+            history = state.get("history", [])
+
 
         if not compleate and trys < self.limit_trys:
                 
@@ -149,9 +154,11 @@ class ChatbotNode(node):
             'messages':  AIMessage(content=response.content),
             "request": AIMessage(content=response.content), # Add the router's decision/response
             "answer": answer, # Update answer with the router's response
-            "finished": state.get("finished", False), # Use .get for safety
+            "finished": finished, # Use .get for safety
             "original_query": orginal_query, # Add the original query
             "trys": trys + 1, # Increment the number of tries
+            "answer_source": 'ChatbotNode', # Add the source of the answer
+            "history": history + [messages], # Update history with the new message
         }
         return state
 
@@ -225,7 +232,8 @@ class SQLNode(node):
         queries = self.get_queries(callings)
         SQL_QUERIES.update(queries)
         new_answer = AIMessage(content=response.text)
-        
+        history = state.get("history", [])
+
         return {
             #"messages": response.content,
             "original_query": state["original_query"], # Add the router's decision/response
@@ -236,6 +244,7 @@ class SQLNode(node):
             "finished": state.get("finished", False), # Use .get for safety
             "answer_source": 'SQL_NODE',
             "trys": state.get("trys", 0) + 1, # Use .get for safety
+            "history": history + [messages], # Update history with the new message
         }
 
 
@@ -287,12 +296,13 @@ class PlotNode(node):
             buf.close()
             # response_plot.candidates[0].content.parts[0].text =  f"binary_image: {image_base64}"
             answer_b = answer + f"binary_image: {image_base64}"
-            
+        history = state.get("history", [])
         return {**state,
                 "messages": messages,
                 "answer": answer,
                 "request": AIMessage(content=answer_b),
                 "answer_source": 'PlotNode',
+                "history": history + [messages], # Update history with the new message
             }
     
     
@@ -357,6 +367,7 @@ class LiteratureNode(node):
         
         #print(F"----- ANSWER: {answer} -------")
 
-
+        history = state.get("history", [])
         return {**state,
-        "messages": AIMessage(content= answer+bibliography),}
+        "messages": AIMessage(content= answer+bibliography),
+        "history": history + [state["messages"]],}

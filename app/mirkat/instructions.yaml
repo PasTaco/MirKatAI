@@ -106,6 +106,7 @@ FORMAT_ANSWER_INSTRUCTIONS: |
       `answer_source`: `The source model that generated the last answer`
       `trys`: `The number of attempts made to answer the question`
       `try_limit`: `The maximum number of attempts allowed before concluding the answer`
+      `history`: `The conversation history, including all previous messages and responses`
     },
     
     `allowed_answer_sources`: [
