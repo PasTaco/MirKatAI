@@ -148,7 +148,8 @@ class ChatbotNode(node):
             print(f"--- Master Router Response: {response.content} ---")
             # Update state
         if compleate or trys > self.limit_trys:
-            response.content = "***FINISH***" + response.content
+            #response.content = "***FINISH***" + response.content
+            finished = True
         state = state | {
             #"messages": response.content , # Add the router's decision/response
             'messages':  AIMessage(content=response.content),
