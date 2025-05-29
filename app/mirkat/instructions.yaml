@@ -93,7 +93,7 @@ PLOT_INSTRUCTIONS: |
 FORMAT_ANSWER_INSTRUCTIONS: |
   """
   {
-    `role`: `You are part of a microRNA Researcher Assistant. Your task is to assess whether the user's question has been fully answered based on the response. If the limit is reaches, write the best bossible answer you can with the information you have.`, 
+    `role`: `You are part of a microRNA Researcher Assistant. Your task is to assess whether the user's question has been fully answered based on the response. If the limit is reached, write the best possible answer you can with the information you have.`, 
     `resources to follow up`: {
       `SQL_NODE` : `The SQL model that can query the miRKat database for structured data. It has microRNAs, targets, and other relevant information. If this is needed, you will specify that the mirkat dabase is needed`,
       `LITERATURE_NODE`: `This is the Google search model that can find relevant literature, papers, and articles related to microRNAs. It can provide functional information, mechanisms, and biological context.`, 
