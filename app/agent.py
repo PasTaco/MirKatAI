@@ -43,6 +43,15 @@ import io
 import json
 from dotenv import load_dotenv
 from app.mirkat.node_constructor import (PlotNode, SQLNode,LiteratureNode, ChatbotNode)
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('mirkat.log'),
+        logging.StreamHandler()
+    ]
+)
 # Load .env file
 load_dotenv()
 
@@ -255,8 +264,11 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
     and decides where to route the conversation next.
     """
     print("\n--- ROUTING: route_chatbot_decision ---")
+    logging.info("Routing decision based on the last message from the chatbot.")
     print (f"--- Current state: {state} ---")
-    messages: List[BaseMessage] = state['messages']
+    logging.info(f"--- Current state: {state} ---")
+    messages: List[BaseMessage] = state['request']
+    logging.info(f"--- Messages in state: {messages} ---")
     if not messages:
         #print("--- Routing Error: No messages found in route_chatbot_decision ---")
         return END # Or raise error
@@ -293,6 +305,10 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
         print(f"\n\n\n After Answer directly before returning to finihs \n\n\n\n")
         return CHATBOT_NODE
     elif "***FINISH***" in content or state.get("finished"): # Check flag too
+        # remove the finish keyword
+        content = content.replace("***FINISH***", "")
+        
+        
         #print("--- Routing: Master Router to END ---")
         return END
     else:

@@ -31,7 +31,15 @@ from langchain_core.messages import AIMessage, ToolMessage
 from vertexai import agent_engines
 
 from frontend.utils.multimodal_utils import format_content
-
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('mirkat.log'),
+        logging.StreamHandler()
+    ]
+)
 st.cache_resource.clear()
 
 
@@ -236,6 +244,7 @@ class EventProcessor:
             }
         )
         # Each event is a tuple message, metadata. https://langchain-ai.github.io/langgraph/how-tos/streaming/#messages
+        ignore_messages = True
         for message, _ in stream:
             if isinstance(message, dict):
                 if message.get("type") == "constructor":
@@ -263,16 +272,24 @@ class EventProcessor:
 
                     # Handle AI responses - Accumulate content but DON'T display yet
                     elif content := message.get("content"):
-                        if isinstance(content, list):
-                             print(f"Received list of content parts: {content}")
-                             self.final_content += "".join(str(part) for part in content)
-                        else:
-                            self.final_content += content
+                        logging.info(f"Received list of content parts: {content}")
+                        if '"answer": "YES"' in content:
+                            ignore_messages = not ignore_messages
+                            logging.info("STREAM_HANDLER: Stop ignoring messages.")
+                        if not ignore_messages or True:
+                            if isinstance(content, list):
+                                print(f"STREAM_HANDLER: Received list of content parts: {content}")
+                                self.final_content += "".join(str(part) for part in content)
+                            else:
+                                self.final_content += content
                         # (Streaming display commented out as per previous request)
 
 
         # --- Handle end of stream: Now display the final collected content ---
         if self.final_content:
+            #self.final_content = '```json{' + self.final_content
+            logging.info(f"STREAM_HANDLER: Final content collected: {self.final_content}")
+            
             # ---- START: Added JSON parsing logic ----
             display_content = self.final_content # Default to the full content
             try:
