@@ -360,7 +360,7 @@ def test_agent_sql(agent_app: AgentEngineApp) -> None:
     assert has_content, "At least one message should have content"
 
 from google.genai.types import Candidate, Content,Part, GenerateContentConfig, GenerateContentResponse
-from app.mirkat.node_constructor import SQLNode 
+from app.mirkat.node_constructor import SQLNode, ChatbotNode
 from langchain_core.messages import ( # Grouped message types
     AIMessage,
     BaseMessage,
@@ -435,7 +435,7 @@ def test_agent_sql_no_model(agent_app: AgentEngineApp, monkeypatch) -> None:
     assert has_content, "At least one message should have content"
 
 
-def test_agent_master_model(agent_app: AgentEngineApp, monkeypatch) -> None:
+def test_agent_master_model_two_trys(agent_app: AgentEngineApp, monkeypatch) -> None:
     """
     Integration test for the agent stream query functionality.
     Tests that the agent returns valid streaming responses.
@@ -458,7 +458,7 @@ def test_agent_master_model(agent_app: AgentEngineApp, monkeypatch) -> None:
     
     monkeypatch.setattr(SQLNode, "run_model", mock_run_model_sql)
     monkeypatch.setattr(SQLNode, "get_queries", mock_get_queries)
-    monkeypatch.setattr(agent, "run_model", mock_run_model_master)
+    monkeypatch.setattr(ChatbotNode, "run_model", mock_run_model_master)
 
     input_dict = {
         "messages": [
