@@ -29,17 +29,18 @@ ROUTING_INSTRUCTIONS : |
 
   **Output format (STRICT):**
 
-  You must output exactly one of the following keywords and a single imperative instruction — nothing else:
-
-  - `***ROUTE_TO_SQL***`
-  - `***ROUTE_TO_LITERATURE***`
-  - `***PLOT***`
-  - `***ANSWER_DIRECTLY***`
-  - `***FINISH***`
-
   The response must be in the format:
   `<ROUTING_KEYWORD>: <IMPERATIVE_INSTRUCTION>`
 
+  **Example Intructions:**
+  - User: "What are the validated targets of hsa-let-7a?" -> `***ROUTE_TO_SQL*** Look for the validated targets of hsa-let-7a in the mirkat database.`
+  - User: "Tell me about the role of miR-21 in cancer." -> `***ROUTE_TO_LITERATURE*** Search for recent literature on miR-21 and its role in cancer.`
+  - User: "Thanks for the target list. Can you explain target prediction algorithms?" -> `***ROUTE_TO_LITERATURE*** Look for literature that explains target prediction algorithms for microRNAs.`
+  - User: "Which database tables store tissue expression?" -> `***ROUTE_TO_SQL*** List the database tables that store tissue expression data in the mirkat database.`
+  - User: "What is a microRNA?" -> `***ANSWER_DIRECTLY*** A microRNA is a small non-coding RNA molecule that regulates gene expression.` (or `***ROUTE_TO_LITERATURE*** Search in the web for a definition of microRNA`)
+  - User: "Okay, thank you! Bye" -> `***FINISH***`
+  - User: "Can you search for papers on lncRNAs?" -> `***ROUTE_TO_LITERATURE*** Search for recent literature on lncRNAs and their functions.`
+  - User: "What's the weather?" -> `***ANSWER_DIRECTLY*** The weather is not related to microRNAs.`
   """
 
 WELCOME_MSG : |
@@ -92,7 +93,7 @@ PLOT_INSTRUCTIONS: |
 FORMAT_ANSWER_INSTRUCTIONS: |
   """
   {
-    `role`: `You are part of a microRNA Researcher Assistant. Your task is to assess whether the user's question has been fully answered based on the response.` 
+    `role`: `You are part of a microRNA Researcher Assistant. Your task is to assess whether the user's question has been fully answered based on the response. If the limit is reaches, write the best bossible answer you can with the information you have.`, 
     `resources to follow up`: {
       `SQL_NODE` : `The SQL model that can query the miRKat database for structured data. It has microRNAs, targets, and other relevant information. If this is needed, you will specify that the mirkat dabase is needed`,
       `LITERATURE_NODE`: `This is the Google search model that can find relevant literature, papers, and articles related to microRNAs. It can provide functional information, mechanisms, and biological context.`, 
@@ -147,6 +148,8 @@ FORMAT_ANSWER_INSTRUCTIONS: |
       `If the original query ask for plots and there is not a binary_image, the answer is NO`,
       `If the original query ask for a table and there is not a table, the answer is NO`,
       `If the original query ask for something different to the capabilities of the model, the answer is YES and the result is the reason why the model is not able to do it`,
+      `If the value of 'trys' is equal or greater than 'try_limit', return the best possible summary answer.`,
+      `If the answer is YES, return a clear, formatted, and self-contained answer to the original question.`,
     ]
   }
   """
