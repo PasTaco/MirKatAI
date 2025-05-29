@@ -15,7 +15,16 @@ from app.mirkat.global_variables import SQL_QUERIES
 from app.mirkat.instructions import Instructions
 import re
 import json
-# Load .env file
+# save logs
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('mirkat.log'),
+        logging.StreamHandler()
+    ]
+)
 load_dotenv()
 
 # Get the API key
@@ -83,6 +92,7 @@ class ChatbotNode(node):
     
     def is_compleated(self, response, original_query, message,answer_source, trys, history = []):
         """Check if the response is complete."""
+        logging.info("Checking if the response is complete")
         # Check if the response contains a SQL query
         if isinstance(original_query, str):
             original_query = original_query
@@ -92,13 +102,15 @@ class ChatbotNode(node):
         message_str = str(message_eval)
         is_compleate = self.run_model_for_compleatness(message_str)
         cleaned = re.sub(r"^```json\s*|\s*```$", "", is_compleate.content.strip())
+        logging.info(f"Cleaned response: {cleaned}")
         return json.loads(cleaned)
 
         
 
     def get_node(self, state):
         """The chatbot with tools. A simple wrapper around the model's own chat interface."""
-        print("\n--- ENTERING: master_node ---")
+        #print("\n--- ENTERING: master_node ---")
+        logging.info("Entering Master Node")
         messages = state['messages']
         answer = None
         orginal_query = state.get("original_query", None)
@@ -107,7 +119,8 @@ class ChatbotNode(node):
         trys = state.get("trys", 0)
         finished = state.get("finished", False)
         if isinstance(messages, AIMessage) and trys > 0:
-            print(f"--- Getting response from the network ---")
+            #print(f"--- Getting response from the network ---")
+            logging.info(f"Getting response from the network")
             response = state['request'].content
             answer_source = state.get("answer_source", None)
             dict_answer = self.is_compleated(response=response, 
@@ -124,7 +137,8 @@ class ChatbotNode(node):
             messages =  AIMessage(content=returned_answer) 
             response = AIMessage(content=returned_answer)
         else:
-            print(f"--- Getting response from the human ---")
+            #print(f"--- Getting response from the human ---")
+            logging.info(f"Getting response from the human")
             orginal_query = messages[-1]
             history = state.get("history", [])
 
@@ -132,10 +146,13 @@ class ChatbotNode(node):
         if not compleate and trys < self.limit_trys:
                 
             print(f"--- Original query: {orginal_query} ---")
+            logging.info(f"Original query: {orginal_query}")
             # Normal operation: Invoke the master LLM for routing/response
             print("--- Calling Master Router LLM ---")
+            logging.info("Calling Master Router LLM")
             # Always invoke with the system message + current history
             print(f"--- Message going to the llm_master: {messages}---")
+            logging.info(f"Message going to the llm_master: {messages}")
             #messages_with_system = [{"type": "system", "content": MIRNA_ASSISTANT_SYSTEM_MESSAGE}] + state["messages"]
             response = self.run_model(str(messages))
             #if "***ANSWER_DIRECTLY***" in response.content.strip():
@@ -144,12 +161,17 @@ class ChatbotNode(node):
             #    answer = response.content
             messages = response
             print(f"--- Master Router Raw Response: {response.content} ---")
+            logging.info(f"Master Router Raw Response: {response.content}")
             print(f"Exiting Master Router with response: {response.content}")
+            logging.info(f"Exiting Master Router with response: {response.content}")
             print(f"--- Master Router Response: {response.content} ---")
+            logging.info(f"Master Router Response: {response.content}")
             # Update state
         if compleate or trys > self.limit_trys:
             #response.content = "***FINISH***" + response.content
             finished = True
+            print(f"Final response is {response.content}")
+            logging.info(f"Final response is {response.content}")
         state = state | {
             #"messages": response.content , # Add the router's decision/response
             'messages':  AIMessage(content=response.content),
@@ -188,8 +210,10 @@ class SQLNode(node):
     def run_model(self, messages):
         """Run the model with the given messages."""
         print(f"--- Message entering run model: {messages}---")
+        logging.info(f"Message entering run model: {messages}")
         text = messages.content
         print (f"--- Message going to the sql model: {text}---")
+        logging.info(f"Message going to the sql model: {text}")
         response = self. chat.send_message(text)
         return response
 
@@ -202,8 +226,16 @@ class SQLNode(node):
         """The sql llm that will check for the sql questions and get a json file in response."""
 
         print("--- Calling SQL Processor Node ---")
+        logging.info("Calling SQL Processor Node")
         print("State: ", state)
-        messages = state['messages']
+        logging.info(f"State: {state}")
+        history = state.get('history', [])
+        # If history is empty, use the last message
+        
+        if history:
+            messages = history[-1]
+        else:
+            messages = state['messages']
         if not messages:
             # Should ideally not happen if routing is correct
             #print("Warning: SQL processor called with no messages.")
@@ -211,24 +243,32 @@ class SQLNode(node):
             return state
 
         print("The type of the message is: ", type(messages))
+        logging.info(f"The type of the message is: {type(messages)}")
         # check if it is GenerateContentResponse
         if isinstance(messages, GenerateContentResponse):
             print("The message is GenerateContentResponse, changing to AIMessage")
+            logging.info("The message is GenerateContentResponse, changing to AIMessage")
             messages = AIMessage(content=messages.candidates[0].content)
         elif isinstance(messages, str):
             print("The message is str, changing to AIMessage")
+            logging.info("The message is str, changing to AIMessage")
             messages = AIMessage(content=messages)
         elif isinstance(messages, AIMessage):
             pass
         else:
             print("The message is not str or AIMessage, changing to AIMessage")
+            logging.info("The message is not str or AIMessage, changing to AIMessage")
             print("The type of the message is: ", type(messages))
+            logging.info(f"The type of the message is: {type(messages)}")
 
         #print("The message sent to the SQL node is: ", messages)
         print("The message sent to the SQL node is: ", messages)
+        logging.info(f"The message sent to the SQL node is: {messages}")
         response = self.run_model(messages)
         print(f"--- SQL Processor LLM Response: {response} ---")
+        logging.info(f"SQL Processor LLM Response: {response}")
         print("Run get_queries")
+        logging.info("Run get_queries")
         callings = response.automatic_function_calling_history
         queries = self.get_queries(callings)
         SQL_QUERIES.update(queries)
@@ -239,7 +279,7 @@ class SQLNode(node):
             #"messages": response.content,
             "original_query": state["original_query"], # Add the router's decision/response
             "messages": messages, # Add the router's decision/response
-            "request": AIMessage(content="This was the answer from SQL node, please format and give to the user: "+response.text), # Add the router's decision/response
+            "request": AIMessage(content=response.text), # Add the router's decision/response
             "table": queries, # Use .get for safety
             "answer": new_answer, # Return the potentially updated answer
             "finished": state.get("finished", False), # Use .get for safety
@@ -265,6 +305,7 @@ class PlotNode(node):
     def run_model(self, messages):
         """Run the model with the given messages."""
         #print(f"--- Message going to the llm_master: {messages}---")
+        logging.info(f"Message going to the llm_master: {messages}")
         response_plot = self.model.send_message(messages)
         return response_plot
     
@@ -349,8 +390,14 @@ class LiteratureNode(node):
         - Bibliography: References, link and website use to obtain the answer
         - ResearcQueries: Quesries used to perform GroundSearch"""
         #print("\n--- ENTERING: Literature node ---")
-        user_query = state["messages"].content
+        logging.info("Entering Literature Node")
+        history = state.get('history', [])
+        if history:
+            user_query = history[-1]
+        else:
+            user_query = state['messages']
         #print(f"\n--- SEARCHING {user_query} with GroundSearch model ---")
+        logging.info(f"Searching {user_query} with GroundSearch model")
 
         # --- Grounding Setup ---
         # Use the native Google Search tool for grounding
@@ -359,7 +406,7 @@ class LiteratureNode(node):
         # --- Model Selection ---
         ## gemini-2.0-flash is faster and return less issues compared to gemini-1.5-flash
         print("\n--- Performing: GroundSearch ---")
-
+        logging.info("Performing GroundSearch")
         response = self.run_model(user_query)
 
 
