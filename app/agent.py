@@ -283,8 +283,6 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
     elif "***PLOT***" in content:
         #print("---- Routing to plot node ----")
         return PLOT_NODE
-    elif "PROPOSED_ANSWER" in content:
-        return CHATBOT_NODE 
     
     elif "***ANSWER_DIRECTLY***" in content:
         content = content.replace("***ANSWER_DIRECTLY***", "")
@@ -292,14 +290,14 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
         state['messages'].content = str(content)
         #  #print (f"--- The answer directly was: {answer}")
         state['answer'] = str(content)#.response.candidates[0].content.parts[0].text
-        print(f"\n\n\n BEFORE CALLING HUMAN NODE \n\n\n\n")
-        return HUMAN_NODE
+        print(f"\n\n\n After Answer directly before returning to finihs \n\n\n\n")
+        return CHATBOT_NODE
     elif "***FINISH***" in content or state.get("finished"): # Check flag too
         #print("--- Routing: Master Router to END ---")
         return END
     else:
         print(f"\n\n\n BEFORE ENDING \n\n\n\n")
-        return END
+        return CHATBOT_NODE
 
 # Router 3: After a Specialist Processor Node (`sql_processor_node`, `literature_search_node`)
 def route_processor_output(state: GraphState) -> Literal["chatbot_router","human_node", "__end__"]:
