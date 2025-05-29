@@ -74,7 +74,7 @@ class ChatbotNode(node):
     def run_model(self, messages):
         """Run the model with the given messages."""
         #print(f"--- Message going to the llm_master: {messages}---")
-        response = self.llm_master.invoke(messages)
+        response = self.llm_master.invoke(str(self.instructions) + messages)
         return response
     def run_model_for_compleatness(self, message_str):
         """Run the model to check if the answer is complete."""
@@ -140,9 +140,10 @@ class ChatbotNode(node):
             messages = response
             print(f"--- Master Router Raw Response: {response.content} ---")
             print(f"Exiting Master Router with response: {response.content}")
-            response.content = "***PROPOSED_ANSWER***" + response.content
             print(f"--- Master Router Response: {response.content} ---")
             # Update state
+        if compleate or trys > self.limit_trys:
+            response.content = "***FINISH***" + response.content
         state = state | {
             #"messages": response.content , # Add the router's decision/response
             'messages':  AIMessage(content=response.content),
