@@ -43,10 +43,10 @@ import io
 import json
 from dotenv import load_dotenv
 #from app.mirkat.node_constructor import (PlotNode, SQLNode,LiteratureNode) 
-from app.mirkat.chatbot_node import ChatbotNode
-from app.mirkat.literature_node import LiteratureNode
-from app.mirkat.plot_node import PlotNode
-from app.mirkat.sql_node import SQLNode
+from app.mirkat.node_chatbot import ChatbotNode
+from app.mirkat.node_literature import LiteratureNode
+from app.mirkat.node_plot import PlotNode
+from app.mirkat.node_sql import SQLNode
 import logging
 logging.basicConfig(
     level=logging.INFO,
