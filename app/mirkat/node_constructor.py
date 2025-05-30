@@ -32,14 +32,19 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 
 class node:
-    def __init__(self, llm=None, instructions=None, functions=None, welcome=None):
+    def __init__(self, llm=None, instructions=None, functions=None, welcome=None, logging_key = None):
         self.llm = llm
         self.instructions = instructions
         self.functions = functions
         self.welcome = welcome
         self.client = genai.Client(api_key=GOOGLE_API_KEY)
+        self.logging_key = logging_key
     def get_node():
         return None
+    def log_message(self, message):
+        """Log the message to the console."""
+        logging.info(self.logging_key + message)
+        print(message)
     
 
 
