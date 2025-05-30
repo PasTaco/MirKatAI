@@ -19,14 +19,12 @@ data processing, and other core components of your application.
 
 from app.mirkat.node_constructor import (
     node,
-    HumanNode, 
-    ChatbotNode,
-    SQLNode,
-    PlotNode,
-    LiteratureNode
-
+    HumanNode
 )
-
+from app.mirkat.node_chatbot import ChatbotNode
+from app.mirkat.node_sql import SQLNode
+from app.mirkat.node_plot import PlotNode
+from app.mirkat.node_literature import LiteratureNode
 import app.mirkat.plot_functions as plot_functions
 
 from langchain_core.messages import ( # Grouped message types
@@ -196,9 +194,11 @@ def test_chatbot_get_node_with_messages(monkeypatch) -> None:
     assert chatbot.llm_master is not None
     status = {"messages":"hi"}
     result = chatbot.get_node(status)
+    print(result)
     # check messages is AIMessage
     assert isinstance(result['messages'], AIMessage)
-    assert result['messages'].content == "hi"
+    assert isinstance(result['request'].content, str)
+    assert result['request'].content == "hi"
     assert result['answer'] is None
     assert result['finished'] is False
     

@@ -16,7 +16,7 @@
 from app.agent import agent
 from google.genai.types import GenerateContentResponse
 from google.genai.types import Candidate, Content,Part, GenerateContentConfig
-from app.mirkat.node_constructor import SQLNode
+from app.mirkat.node_sql import SQLNode
 
 def test_agent_stream() -> None:
     """

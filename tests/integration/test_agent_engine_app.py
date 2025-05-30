@@ -19,6 +19,21 @@ import pytest
 from app.agent_engine_app import AgentEngineApp
 import sys
 import os
+
+from google.genai.types import Candidate, Content,Part, GenerateContentConfig, GenerateContentResponse
+#from app.mirkat.node_constructor import SQLNode, ChatbotNode
+from app.mirkat.node_sql import SQLNode
+from app.mirkat.node_chatbot import ChatbotNode
+from langchain_core.messages import ( # Grouped message types
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage
+    # ToolMessage is implicitly handled by LangGraph/ToolNode
+)
+from app import agent
+
+
 current_path = os.path.dirname(os.path.abspath(__file__))
 if current_path.endswith("app"):
     sys.path.append("../tests")
@@ -359,16 +374,6 @@ def test_agent_sql(agent_app: AgentEngineApp) -> None:
             break
     assert has_content, "At least one message should have content"
 
-from google.genai.types import Candidate, Content,Part, GenerateContentConfig, GenerateContentResponse
-from app.mirkat.node_constructor import SQLNode, ChatbotNode
-from langchain_core.messages import ( # Grouped message types
-    AIMessage,
-    BaseMessage,
-    HumanMessage,
-    SystemMessage
-    # ToolMessage is implicitly handled by LangGraph/ToolNode
-)
-from app import agent
 
 def test_agent_sql_no_model(agent_app: AgentEngineApp, monkeypatch) -> None:
     """
