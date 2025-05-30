@@ -211,7 +211,7 @@ def test_chatbot_get_node_with_messages_answer_directly(monkeypatch) -> None:
     result = chatbot.get_node(status)
     # check messages is AIMessage
     assert isinstance(result['messages'], AIMessage)
-    assert result['messages'].content == ""
+    assert result['request'].content == ""
     assert result['answer'] == ""
     assert result['finished'] is False
 
@@ -221,8 +221,8 @@ def test_chatbot_get_node_without_messages() -> None:
     status = {"messages":None}
     result = chatbot.get_node(status)
     # check messages is AIMessage
-    assert isinstance(result['messages'], AIMessage)
-    assert result['messages'].content == "Welcome to the chatbot! How can I assist you today?"
+    assert isinstance(result['request'], AIMessage)
+    assert result['request'].content == "Welcome to the chatbot! How can I assist you today?"
     assert result['answer'] is None
     assert result['finished'] is False
 
@@ -233,8 +233,8 @@ def test_chatbot_get_node_without_messages_with_welcome() -> None:
     status = {"messages":None}
     result = chatbot.get_node(status)
     # check messages is AIMessage
-    assert isinstance(result['messages'], AIMessage)
-    assert result['messages'].content == "Buongiorno dottore!"
+    assert isinstance(result['request'], AIMessage)
+    assert result['request'].content == "Buongiorno dottore!"
     assert result['answer'] is None
     assert result['finished'] is False
 
@@ -258,7 +258,7 @@ def test_sql_node() -> None:
 def test_sql_without_messages() -> None:
     """Check that the node is a responsive llm node"""
     sql_node = SQLNode(instructions="you are a SQL expert", functions=[min, max])
-    status = {"messages":None}
+    status = {"messages":None, 'request': None}
     result = sql_node.get_node(status)
     assert result['messages'] is None
 
@@ -266,7 +266,7 @@ def test_sql_without_messages() -> None:
 def test_sql_with_messages_str(monkeypatch) -> None:
     """Check that the node is a responsive llm node"""
     sql_node = SQLNode(instructions="you are a SQL expert", functions=[min, max])
-    status = {"messages":"hi"}
+    status = {"messages":"hi", 'request': AIMessage(content="hi")}
     def mock_run_model(*args, **kwargs):
         fake_response = GenerateContentResponse
         fake_response.automatic_function_calling_history= 'many functions'
@@ -283,7 +283,7 @@ def test_sql_with_messages_str(monkeypatch) -> None:
 
     # check messages is AIMessage
     assert isinstance(result['messages'], AIMessage)
-    assert result['messages'].content == "This was the answer from SQL node, please format and give to the user: Risotto alla Milanese"
+    assert result['request'].content == "This was the answer from SQL node, please format and give to the user: Risotto alla Milanese"
     assert result['answer'] == ""
     assert result['table'] == {"query":"result"}
     assert result['finished'] is False
@@ -378,7 +378,7 @@ def test_literature_node() -> None:
 def test_literature_get_node(monkeypatch) -> None:
     """Check that the node is a responsive llm node"""
     literature_node = LiteratureNode(instructions="you are a literature expert", functions=[min, max])
-    status = {"messages":AIMessage(content="hi")}
+    status = {"request":AIMessage(content="hi")}
 
     monkeypatch.setattr(literature_node, "run_model", 
                             lambda *args, **kwargs: "Research done")
@@ -408,3 +408,6 @@ def test_sql_get_node(monkeypatch) -> None:
     assert "This was the answer from SQL node, please format and give to the user:" in result['request'].content
     assert result["answer_source"] == "SQL_NODE"
     assert result["answer"].content == "Mir1"
+
+
+

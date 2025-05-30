@@ -18,7 +18,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 class PlotNode(node):
     def __init__(self, llm=None, instructions=None, functions=None,  welcome=None):
-        super().__init__(llm, instructions, functions, welcome)
+        super().__init__(llm, instructions, functions, welcome, logging_key="Plot node.- ")
         self.client = genai.Client(api_key=GOOGLE_API_KEY)
         self.set_model()
 
@@ -32,7 +32,7 @@ class PlotNode(node):
     def run_model(self, messages):
         """Run the model with the given messages."""
         #print(f"--- Message going to the llm_master: {messages}---")
-        self.log_message(f"Message going to the llm_master: {messages}")
+        self.log_message(f"Message going to the node: {messages}")
         response_plot = self.model.send_message(messages)
         return response_plot
     

@@ -172,6 +172,7 @@ class GraphState(TypedDict):
     request: Optional[AIMessage]
     answer_source: Optional[str]
     trys: int
+    history: List[BaseMessage] 
 
 
 

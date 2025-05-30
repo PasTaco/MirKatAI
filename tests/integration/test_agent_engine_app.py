@@ -523,3 +523,27 @@ def test_all_master_retys():
         }
         events = list(agent_app.stream_query(input=input_dict))
         assert len(events) > 0, "Expected at least one chunk in response"
+
+
+def test_history_track(agent_app: AgentEngineApp) -> None:
+    """
+    Test that the history is tracked correctly in the agent.
+    """
+    input_dict = {
+        "messages": [
+            {"type": "human", "content": "Test message 1"},
+            {"type": "human", "content": "Test message 2"},
+        ],
+        "table": None,
+        "answer": None,
+        "finished": False,
+        "user_id": "test-user",
+        "session_id": "test-session",
+    }
+
+    response = agent_app.stream_query(input=input_dict)
+
+    # Check if history contains both messages
+    assert len(response["history"]) == 2, "History should contain two messages"
+    assert response["history"][0]["content"] == "Test message 1"
+    assert response["history"][1]["content"] == "Test message 2"
