@@ -70,6 +70,8 @@ class ChatbotNode(node):
         self.log_message(f"History: {history}")
         if len(history) > 0:
             messages = history[-1]
+        else:
+            history = messages
         trys = state.get("trys", 0)
         finished = state.get("finished", False)
         if isinstance(messages, AIMessage) and trys > 0:

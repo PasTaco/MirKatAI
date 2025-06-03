@@ -3,7 +3,7 @@ from langchain_core.messages import (
     AIMessage
     )
 from google.genai import types
-from google import genai 
+from google.genai import Client
 from dotenv import load_dotenv
 from app.mirkat.plot_functions import PlotFunctons
 import base64
@@ -19,7 +19,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 class PlotNode(node):
     def __init__(self, llm=None, instructions=None, functions=None,  welcome=None):
         super().__init__(llm, instructions, functions, welcome, logging_key="Plot node.- ")
-        self.client = genai.Client(api_key=GOOGLE_API_KEY)
+        self.client = Client(api_key=GOOGLE_API_KEY)
         self.set_model()
 
     def set_model(self):
