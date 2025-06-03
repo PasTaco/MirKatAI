@@ -196,3 +196,5 @@ my_env.tfvars
 .env
 .requirements.txt
 *.tsv
+tests/integration/tables
+app/tables

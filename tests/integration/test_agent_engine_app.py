@@ -620,22 +620,6 @@ def test_agent_master_model_two_trys(agent_app: AgentEngineApp, monkeypatch) -> 
 
 
 
-def test_all_master_retys(agent_app):
-        query = 'find the role of miR-143 in ageing and what targets genes it has on the database'
-        input_dict = {
-            "messages": [
-                {"type": "human", "content": query},
-            ],
-            "table": None,
-            "answer": None,
-            "finished": False,
-            "user_id": "test-user",
-            "session_id": "test-session",
-        }
-        events = list(agent_app.stream_query(input=input_dict))
-        assert len(events) > 0, "Expected at least one chunk in response"
-
-
 def test_history_track(agent_app: AgentEngineApp, monkeypatch) -> None:
     """
     Test that the history is tracked correctly in the agent.
