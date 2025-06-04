@@ -193,9 +193,9 @@ class StreamHandler:
 
     def new_token(self, token: str) -> None:
         """Add a new token to the main text display."""
-        #self.text += token
-        #self.container.markdown(format_content(self.text), unsafe_allow_html=True)
-        pass
+        self.text += token
+        self.container.markdown(format_content(self.text), unsafe_allow_html=True)
+        
 
     def new_status(self, status_update: str) -> None:
         """Add a new status update to the tool calls expander."""
