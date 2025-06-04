@@ -199,9 +199,9 @@ class StreamHandler:
 
     def new_status(self, status_update: str) -> None:
         """Add a new status update to the tool calls expander."""
-        #self.tools_logs += status_update
-        #self.tool_expander.markdown(status_update)
-        pass
+        self.tools_logs += status_update
+        self.tool_expander.markdown(status_update)
+        
 
 
 class EventProcessor:
@@ -255,10 +255,6 @@ class EventProcessor:
                         tool_calls = message["tool_calls"]
                         ai_message = AIMessage(content="", tool_calls=tool_calls)
                         self.tool_calls.append(ai_message.model_dump())
-                        # for tool_call in tool_calls:
-                        #     msg = f"\n\nCalling tool: `{tool_call['name']}` with args: `{tool_call['args']}`"
-                        #     # self.stream_handler.new_status(msg) # DO NOT DISPLAY YET - CHANGED (Commented out)
-
                     # Handle tool responses - Accumulate info but DON'T display yet
                     elif message.get("tool_call_id"):
                         content = message["content"]
@@ -267,8 +263,6 @@ class EventProcessor:
                             content=content, type="tool", tool_call_id=tool_call_id
                         ).model_dump()
                         self.tool_calls.append(tool_message)
-                        # msg = f"\n\nTool response: `{content}`"
-                        # # self.stream_handler.new_status(msg) # DO NOT DISPLAY YET - CHANGED (Commented out)
 
                     # Handle AI responses - Accumulate content but DON'T display yet
                     elif content := message.get("content"):
@@ -287,7 +281,6 @@ class EventProcessor:
 
         # --- Handle end of stream: Now display the final collected content ---
         if self.final_content:
-            #self.final_content = '```json{' + self.final_content
             logging.info(f"STREAM_HANDLER: Final content collected: {self.final_content}")
             
             # ---- START: Added JSON parsing logic ----

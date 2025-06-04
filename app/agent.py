@@ -5,10 +5,13 @@ from langchain_core.tools import tool
 from langchain_google_vertexai import ChatVertexAI
 from langgraph.graph import END, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
+import os, sys
+current_path = os.path.dirname(os.path.abspath(__file__))
+print(f"Current path: {current_path}")
 
 # import libraries
 import pandas as pd
-import os
+
 from pprint import pprint
 from typing import Any, Dict, List, Literal, Optional, TypedDict # Grouped and sorted alphabetically
 from pprint import pformat
@@ -42,7 +45,6 @@ import io
 ## load env variables and set up gemini API key:
 import json
 from dotenv import load_dotenv
-#from app.mirkat.node_constructor import (PlotNode, SQLNode,LiteratureNode) 
 from app.mirkat.node_chatbot import ChatbotNode
 from app.mirkat.node_literature import LiteratureNode
 from app.mirkat.node_plot import PlotNode
@@ -190,28 +192,11 @@ def human_node(state: GraphState) -> GraphState:
     if isinstance(last_msg, AIMessage) or isinstance(last_msg, GenerateContentResponse):
         if answer:
             print("Assistant:", answer)
-            #display(Markdown(answer))
             state["answer"] = None
-            #print()
-        #else:
-            #print("Assistant:", last_msg.content)
-            #display(Markdown(last_msg.content))
+
     print("="*30)
     return state
-    #user_input = input("User: ")
-
-    # If it looks like the user is trying to quit, flag the conversation
-    # as over.
-    #if user_input.strip().lower() in {"q", "quit", "exit", "goodbye", "bye", "thanks that's all"}:
-    #    state["finished"] = True
-
-    #return state | {"messages": [("user", user_input)]}
-    #return {
-    #    "messages": state["messages"] +[HumanMessage(content=user_input)],
-    #    "table": state["table"],
-    #    "answer": state["answer"],
-    #    "finished": state["finished"]}
-
+   
 
 SQL_QUERIES = {}
     
@@ -254,13 +239,7 @@ def route_after_human(state: GraphState) -> Literal["chatbot_router", "__end__"]
     Otherwise, directs the conversation to the main chatbot.
     """
     return END
-    #print("\n--- ROUTING: route_after_human ---")
-    if state.get("finished", False):
-        #print("--- Routing: Human to END ---")
-        return END
-    else:
-        #print("--- Routing: Human to Chatbot ---")
-        return CHATBOT_NODE
+
 
 # Router 2: After the Main Chatbot/Router (`chatbot_with_tools`)
 def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "literature_search_node","human_node", "chatbot_router",  "__end__"]:
@@ -327,30 +306,22 @@ def route_processor_output(state: GraphState) -> Literal["chatbot_router","human
     Routes to 'tools' if a tool call was made (e.g., query_database, ground_search).
     Routes to 'human_node' if a final synthesized answer was provided.
     """
-    print("\n--- ROUTING: route_processor_output ---")
+    logging.info("\n--- ROUTING: route_processor_output ---")
     messages: List[BaseMessage] = state['messages']
     if not messages:
         #print("--- Routing Error: No messages found in route_processor_output ---")
         return END
 
     last_message = messages
-
-    #if not isinstance(last_message, AIMessage):
-    #    print(f"--- Routing Warning: Expected AIMessage from processor, got {type(last_message)}. Routing to Human. ---")
-    #    return HUMAN_NODE
-    # Otherwise, the processor provided its final synthesized answer
-    #else:
-    #    print("--- Routing: Processor to Human ---")
     return CHATBOT_NODE
         
 def route_after_tools(state: GraphState) -> Literal["sql_processor_node", "literature_search_node","human_node"]:
     """ Routes back to the specialist node that originally called the tool OR to human if unclear."""
-    #print("\n--- ROUTING: route_after_tools ---")
+    logging.info("\n--- ROUTING: route_after_tools ---")
     messages = state['messages']
     # The last message is the ToolMessage with results
     # The second to last message *should* be the AIMessage that made the tool call
     if len(messages) < 2:
-         #print("--- Routing Warning: Tool execution happened without prior AI message? Routing to Human. ---")
          return HUMAN_NODE # Should not happen
 
     ai_message_that_called_tool = messages[-2]
@@ -364,16 +335,16 @@ def route_after_tools(state: GraphState) -> Literal["sql_processor_node", "liter
     called_tool_names = {call['name'] for call in ai_message_that_called_tool.tool_calls}
 
     if any(name in db_tool_names for name in called_tool_names):
-         #print("--- Routing: Tools back to SQL Processor ---")
-         return SQL_NODE
+        logging.info(f"--- Routing: Tool call was from SQL LLM. Called tools: {called_tool_names} ---")
+        return SQL_NODE
     # Check if the tool call was Google Search (handled implicitly by LangChain for native tools)
     elif any(call['name'].lower() == 'googlesearchretrieval' for call in ai_message_that_called_tool.tool_calls):
-         #print("--- Routing: Tools back to Literature Searcher ---")
-         return LITERATURE_NODE
+        logging.info(f"--- Routing: Tool call was from Literature Search LLM. Called tools: {called_tool_names} ---")
+        return LITERATURE_NODE
     else:
          # Fallback if the origin is unclear
-         #print(f"--- Routing Warning: Tool caller unclear ({called_tool_names}). Routing to Human. ---")
          # Add a message indicating confusion?
+         logging.warning(f"--- Routing Warning: Unclear which process should handle the tool results. Called tools: {called_tool_names} ---")
          state['messages'].append(SystemMessage(content="(System: Unclear which process should handle the tool results. Displaying results directly.)"))
          return HUMAN_NODE
     
