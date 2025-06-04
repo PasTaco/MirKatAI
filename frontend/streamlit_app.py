@@ -137,16 +137,57 @@ def display_chat_message(message: dict[str, Any], index: int) -> None:
     chat_message = st.chat_message(message["type"])
     print(f"---- Entering display_chat_message with message: {message}----")
     with chat_message:
-        message_content = message["content"]
+        raw_content = message["content"]
+        display_content = raw_content # Default display is the raw content
         plot = False
-        if "binary_image" in message_content:
-            plot = True
-            image_binary = message_content.split("binary_image")[1].strip()
-            message_content = message_content.split("binary_image")[0]
-        st.markdown(format_content(message_content), unsafe_allow_html=True)
+
+        # ---- START: Add JSON parsing logic for AI messages ----
+        if message["type"] == "ai" and isinstance(raw_content, str): # Only parse AI string content
+            try:
+                # Attempt to find and parse JSON within the final content
+                json_part = raw_content
+                if json_part.strip().startswith("```json"):
+                    json_part = json_part.split("```json", 1)[1]
+                elif json_part.strip().startswith("json\n"):
+                    json_part = json_part.split("json\n", 1)[1]
+
+                start_index = json_part.find('{')
+                end_index = json_part.rfind('}')
+                if start_index != -1 and end_index != -1 and end_index > start_index:
+                    json_str = json_part[start_index : end_index + 1]
+                    parsed_json = json.loads(json_str)
+                    if "return" in parsed_json:
+                        display_content = parsed_json["return"] # Use the extracted value
+                        print(f"Extracted 'return' value for display: {display_content}")
+                    else:
+                         print("Parsed JSON, but 'return' key not found. Displaying full content.")
+                else:
+                    print("Could not find valid JSON object delimiters {}. Displaying full content.")
+
+            except json.JSONDecodeError:
+                print(f"Content is not valid JSON or couldn't parse relevant part. Displaying full content.")
+            except Exception as e:
+                print(f"An unexpected error occurred during JSON parsing: {e}. Displaying full content.")
+        # ---- END: Added JSON parsing logic ----
+
+        # --- Handle potential image data (assuming it's separate from JSON) ---
+        # Note: This assumes the image data isn't *inside* the JSON you want to parse.
+        # If it is, the parsing logic needs adjustment.
+        message_to_display = display_content
+        if isinstance(display_content, str) and "binary_image" in display_content:
+             plot = True
+             image_binary = display_content.split("binary_image")[1].strip()
+             message_to_display = display_content.split("binary_image")[0] # Text part
+        elif not isinstance(display_content, str):
+            # If parsing resulted in non-string (e.g. the dict itself if 'return' not found), handle appropriately
+            message_to_display = format_content(display_content) # Use format_content for safety
+
+        # --- Display the processed content ---
+        st.markdown(format_content(message_to_display), unsafe_allow_html=True) # Use message_to_display
+
         if plot:
             image_binary_bytes = base64.b64decode(image_binary)
-            print(f"---- Entering display_chat_message trying the image_binary:----")
+            print(f"---- Displaying image ----")
             st.image(
                 image_binary_bytes,
                 caption="Generated Image",
@@ -154,22 +195,32 @@ def display_chat_message(message: dict[str, Any], index: int) -> None:
                 output_format="auto",
             )
             plot = False
+
+        # --- Display buttons (logic remains the same) ---
         col1, col2, col3 = st.columns([2, 2, 94])
-        display_message_buttons(message, index, col1, col2, col3)
+        # Pass the RAW content to the edit buttons if needed
+        display_message_buttons(message, index, col1, col2, col3, raw_content_for_editing=raw_content)
 
 
 def display_message_buttons(
-    message: dict[str, Any], index: int, col1: Any, col2: Any, col3: Any
+    message: dict[str, Any], index: int, col1: Any, col2: Any, col3: Any, raw_content_for_editing: Any
 ) -> None:
     """Display edit, refresh, and delete buttons for a chat message."""
     edit_button = f"{index}_edit"
     refresh_button = f"{index}_refresh"
     delete_button = f"{index}_delete"
-    content = (
-        message["content"]
-        if isinstance(message["content"], str)
-        else message["content"][-1]["text"]
+    # Decide what content to use for editing - might need the raw content
+    content_for_editing = (
+        raw_content_for_editing
+        if isinstance(raw_content_for_editing, str)
+        else json.dumps(raw_content_for_editing) # Or handle non-string raw content appropriately
     )
+    # Ensure edit uses the original raw content if needed
+    if isinstance(message["content"], list): # Handle multimodal input for editing
+         # Find the text part for editing, might need adjustment based on your structure
+         text_parts = [part["text"] for part in message["content"] if part["type"] == "text"]
+         content_for_editing = text_parts[0] if text_parts else ""
+
 
     with col1:
         st.button(label="✎", key=edit_button, type="primary")
@@ -179,7 +230,7 @@ def display_message_buttons(
                 label="⟳",
                 key=refresh_button,
                 type="primary",
-                on_click=partial(MessageEditing.refresh_message, st, index, content),
+                on_click=partial(MessageEditing.refresh_message, st, index, content_for_editing), # Use content_for_editing
             )
         with col3:
             st.button(
@@ -192,7 +243,7 @@ def display_message_buttons(
     if st.session_state[edit_button]:
         st.text_area(
             "Edit your message:",
-            value=content,
+            value=content_for_editing, # Use content_for_editing
             key=f"edit_box_{index}",
             on_change=partial(MessageEditing.edit_message, st, index, message["type"]),
         )
@@ -202,15 +253,22 @@ def display_tool_output(
     tool_call_input: dict[str, Any], tool_call_output: dict[str, Any]
 ) -> None:
     """Display the input and output of a tool call in an expander."""
-    tool_expander = st.expander(label="Tool Calls:", expanded=False)
-    with tool_expander:
-        msg = (
-            f"\n\nEnding tool: `{tool_call_input}` with\n **args:**\n"
-            f"```\n{json.dumps(tool_call_input, indent=2)}\n```\n"
-            f"\n\n**output:**\n "
-            f"```\n{json.dumps(tool_call_output, indent=2)}\n```"
-        )
-        st.markdown(msg, unsafe_allow_html=True)
+    # Use st.expander directly within display_messages if preferred,
+    # or ensure this function is called correctly.
+    # Let's assume it's called from display_messages:
+    with st.expander(label=f"Tool Call: `{tool_call_input.get('name', 'Unknown Tool')}`", expanded=False):
+         st.markdown("**Input:**")
+         st.json(tool_call_input.get('args', {}))
+         st.markdown("**Output:**")
+         # The tool output content might be JSON string or actual dict/list
+         output_content = tool_call_output.get('content', '')
+         try:
+             # Try to pretty-print if it's a JSON string
+             parsed_output = json.loads(output_content)
+             st.json(parsed_output)
+         except (json.JSONDecodeError, TypeError):
+             # Otherwise, display as text
+             st.code(str(output_content), language=None)
 
 
 def handle_user_input(side_bar: SideBar) -> None:

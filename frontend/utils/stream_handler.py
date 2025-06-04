@@ -31,7 +31,15 @@ from langchain_core.messages import AIMessage, ToolMessage
 from vertexai import agent_engines
 
 from frontend.utils.multimodal_utils import format_content
-
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('mirkat.log'),
+        logging.StreamHandler()
+    ]
+)
 st.cache_resource.clear()
 
 
@@ -187,11 +195,13 @@ class StreamHandler:
         """Add a new token to the main text display."""
         self.text += token
         self.container.markdown(format_content(self.text), unsafe_allow_html=True)
+        
 
     def new_status(self, status_update: str) -> None:
         """Add a new status update to the tool calls expander."""
         self.tools_logs += status_update
         self.tool_expander.markdown(status_update)
+        
 
 
 class EventProcessor:
@@ -215,6 +225,12 @@ class EventProcessor:
         self.current_run_id = str(uuid.uuid4())
         # Set run_id in session state at start of processing
         self.st.session_state["run_id"] = self.current_run_id
+
+        # --- Clear previous output before starting stream ---
+        self.stream_handler.container.empty()
+        self.stream_handler.tool_expander.empty()
+        # ----------------------------------------------------
+
         stream = self.client.stream_messages(
             data={
                 "input": {"messages": messages},
@@ -228,21 +244,18 @@ class EventProcessor:
             }
         )
         # Each event is a tuple message, metadata. https://langchain-ai.github.io/langgraph/how-tos/streaming/#messages
+        ignore_messages = True
         for message, _ in stream:
             if isinstance(message, dict):
                 if message.get("type") == "constructor":
                     message = message["kwargs"]
 
-                    # Handle tool calls
+                    # Handle tool calls - Accumulate info but DON'T display yet
                     if message.get("tool_calls"):
                         tool_calls = message["tool_calls"]
                         ai_message = AIMessage(content="", tool_calls=tool_calls)
                         self.tool_calls.append(ai_message.model_dump())
-                        for tool_call in tool_calls:
-                            msg = f"\n\nCalling tool: `{tool_call['name']}` with args: `{tool_call['args']}`"
-                            self.stream_handler.new_status(msg)
-
-                    # Handle tool responses
+                    # Handle tool responses - Accumulate info but DON'T display yet
                     elif message.get("tool_call_id"):
                         content = message["content"]
                         tool_call_id = message["tool_call_id"]
@@ -250,27 +263,113 @@ class EventProcessor:
                             content=content, type="tool", tool_call_id=tool_call_id
                         ).model_dump()
                         self.tool_calls.append(tool_message)
-                        msg = f"\n\nTool response: `{content}`"
-                        self.stream_handler.new_status(msg)
 
-                    # Handle AI responses
+                    # Handle AI responses - Accumulate content but DON'T display yet
                     elif content := message.get("content"):
-                        self.final_content += content
-                        self.stream_handler.new_token(content)
+                        logging.info(f"Received list of content parts: {content}")
+                        if '"answer": "YES"' in content:
+                            ignore_messages = not ignore_messages
+                            logging.info("STREAM_HANDLER: Stop ignoring messages.")
+                        if not ignore_messages or True:
+                            if isinstance(content, list):
+                                print(f"STREAM_HANDLER: Received list of content parts: {content}")
+                                self.final_content += "".join(str(part) for part in content)
+                            else:
+                                self.final_content += content
+                        # (Streaming display commented out as per previous request)
 
-        # Handle end of stream
+
+        # --- Handle end of stream: Now display the final collected content ---
         if self.final_content:
+            logging.info(f"STREAM_HANDLER: Final content collected: {self.final_content}")
+            
+            # ---- START: Added JSON parsing logic ----
+            display_content = self.final_content # Default to the full content
+            try:
+                # Attempt to find and parse JSON within the final content
+                # Handle potential markdown fences like ```json\n{...}\n```
+                json_part = self.final_content
+                if json_part.strip().startswith("```json"):
+                    json_part = json_part.split("```json", 1)[1]
+                elif json_part.strip().startswith("json\n"):
+                     json_part = json_part.split("json\n", 1)[1]
+
+                # Find the start and end of the JSON object
+                start_index = json_part.find('{')
+                end_index = json_part.rfind('}')
+                if start_index != -1 and end_index != -1 and end_index > start_index:
+                    json_str = json_part[start_index : end_index + 1]
+                    parsed_json = json.loads(json_str)
+                    if "return" in parsed_json:
+                        display_content = parsed_json["return"]
+                    else:
+                         print("Parsed JSON, but 'return' key not found. Displaying full content.")
+                else:
+                     print("Could not find valid JSON object delimiters {}. Displaying full content.")
+
+            except json.JSONDecodeError:
+                print(f"Final content is not valid JSON or couldn't parse relevant part. Displaying full content.")
+            except Exception as e:
+                print(f"An unexpected error occurred during JSON parsing: {e}. Displaying full content.")
+             # --- END: Added JSON parsing logic ---
+
+            # Display the potentially extracted 'return' value or the full content
+            # Use the 'display_content' variable here
+            self.stream_handler.container.markdown(format_content(display_content), unsafe_allow_html=True) # MODIFIED LINE
+
+            # IMPORTANT: Store the ORIGINAL full final_content in the message history
             final_message = AIMessage(
-                content=self.final_content,
+                content=self.final_content, # Use original self.final_content here
                 id=self.current_run_id,
                 additional_kwargs=self.additional_kwargs,
             ).model_dump()
             session = self.st.session_state["session_id"]
+            # Update messages in session state *after* processing
             self.st.session_state.user_chats[session]["messages"] = (
                 self.st.session_state.user_chats[session]["messages"] + self.tool_calls
             )
             self.st.session_state.user_chats[session]["messages"].append(final_message)
-            self.st.session_state.run_id = self.current_run_id
+            self.st.session_state.run_id = self.current_run_id # Ensure run_id is set
+
+            # Display tool calls summary in the expander (optional)
+            # (Code for displaying tool calls remains the same as before)
+            if self.tool_calls:
+                tool_log_str = ""
+                for tool_call_msg in self.tool_calls:
+                    if tc_list := tool_call_msg.get("tool_calls"):
+                        for tc in tc_list:
+                            name = tc.get('name', 'Unknown Tool')
+                            args = tc.get('args', {})
+                            tool_log_str += f"\n\nCalling tool: `{name}` with args: `{json.dumps(args)}`"
+                    elif tool_call_msg.get("tool_call_id"):
+                        tool_content = tool_call_msg.get("content", "No content in response")
+                        tool_log_str += f"\n\nTool response: `{tool_content}`"
+                if tool_log_str:
+                    self.stream_handler.tool_expander.markdown(tool_log_str.strip())
+
+        else:
+            # Handle cases where there might be no final text content
+            self.stream_handler.container.markdown("*No text content returned.*")
+            if self.tool_calls:
+                session = self.st.session_state["session_id"]
+                self.st.session_state.user_chats[session]["messages"] = (
+                    self.st.session_state.user_chats[session]["messages"] + self.tool_calls
+                )
+                # (Display tool calls summary as before)
+                tool_log_str = ""
+                for tool_call_msg in self.tool_calls:
+                     if tc_list := tool_call_msg.get("tool_calls"):
+                         for tc in tc_list:
+                             name = tc.get('name', 'Unknown Tool')
+                             args = tc.get('args', {})
+                             tool_log_str += f"\n\nCalling tool: `{name}` with args: `{json.dumps(args)}`"
+                     elif tool_call_msg.get("tool_call_id"):
+                         tool_content = tool_call_msg.get("content", "No content in response")
+                         tool_log_str += f"\n\nTool response: `{tool_content}`"
+                if tool_log_str:
+                    self.stream_handler.tool_expander.markdown(tool_log_str.strip())
+
+            self.st.session_state.run_id = self.current_run_id # Ensure run_id is set
 
 
 def get_chain_response(st: Any, client: Client, stream_handler: StreamHandler) -> None:

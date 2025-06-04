@@ -5,10 +5,13 @@ from langchain_core.tools import tool
 from langchain_google_vertexai import ChatVertexAI
 from langgraph.graph import END, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
+import os, sys
+current_path = os.path.dirname(os.path.abspath(__file__))
+print(f"Current path: {current_path}")
 
 # import libraries
 import pandas as pd
-import os
+
 from pprint import pprint
 from typing import Any, Dict, List, Literal, Optional, TypedDict # Grouped and sorted alphabetically
 from pprint import pformat
@@ -17,6 +20,7 @@ from app.mirkat.sql_functions import (
     MySqlConnection,
     DBTools
 )
+import re
 from app.mirkat.literature_functions import LiteratureTools
 from app.mirkat.plot_functions import PlotFunctons
 
@@ -39,9 +43,21 @@ import google.ai.generativelanguage as genai_types
 import base64
 import io
 ## load env variables and set up gemini API key:
-
+import json
 from dotenv import load_dotenv
-from app.mirkat.node_constructor import (PlotNode, SQLNode,LiteratureNode)
+from app.mirkat.node_chatbot import ChatbotNode
+from app.mirkat.node_literature import LiteratureNode
+from app.mirkat.node_plot import PlotNode
+from app.mirkat.node_sql import SQLNode
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('mirkat.log'),
+        logging.StreamHandler()
+    ]
+)
 # Load .env file
 load_dotenv()
 
@@ -49,6 +65,7 @@ load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 LOCATION = "europe-west1"
+LLM_ROUTE = "gemini-1.5-flash"
 LLM = "gemini-2.0-flash"
 LLM_SQL = "gemini-2.5-flash-preview-04-17"
 LLM_PLOT = "gemini-2.0-flash"
@@ -62,12 +79,13 @@ LLM_PLOT = "gemini-2.0-flash"
 # istantiate llms for nodes
 
 llm_master = ChatGoogleGenerativeAI(model=LLM)
-
+llm_response = ChatGoogleGenerativeAI(model=LLM)
 
 ###### define instructions for nodes
 
 
 MIRNA_ASSISTANT_SYSTEM_MESSAGE, WELCOME_MSG = Instructions.router.get_instruction()
+MIRNA_COMPLETE_ANSWER = Instructions.format_answer.get_instruction()
 SQL_INSTRUCTIONS = Instructions.sql.get_instruction()
 PLOT_INSTRUCTIONS = Instructions.plot.get_instruction()
 
@@ -152,7 +170,11 @@ class GraphState(TypedDict):
     bibliography: list
     research_queries: list
     finished: bool
-    
+    original_query: Optional[HumanMessage]
+    request: Optional[AIMessage]
+    answer_source: Optional[str]
+    trys: int
+    history: List[BaseMessage] 
 
 
 
@@ -170,67 +192,17 @@ def human_node(state: GraphState) -> GraphState:
     if isinstance(last_msg, AIMessage) or isinstance(last_msg, GenerateContentResponse):
         if answer:
             print("Assistant:", answer)
-            #display(Markdown(answer))
             state["answer"] = None
-            #print()
-        #else:
-            #print("Assistant:", last_msg.content)
-            #display(Markdown(last_msg.content))
+
     print("="*30)
     return state
-    #user_input = input("User: ")
+   
 
-    # If it looks like the user is trying to quit, flag the conversation
-    # as over.
-    #if user_input.strip().lower() in {"q", "quit", "exit", "goodbye", "bye", "thanks that's all"}:
-    #    state["finished"] = True
-
-    #return state | {"messages": [("user", user_input)]}
-    #return {
-    #    "messages": state["messages"] +[HumanMessage(content=user_input)],
-    #    "table": state["table"],
-    #    "answer": state["answer"],
-    #    "finished": state["finished"]}
-
-def chatbot_with_tools(state: GraphState) -> GraphState:
-    """The chatbot with tools. A simple wrapper around the model's own chat interface."""
-    print("\n--- ENTERING: master_node ---")
-
-    
-    messages = state['messages']
-    answer = None
-
-    # Check if this is the very first turn (no messages yet)
-    if not messages:
-        # Generate the welcome message directly
-        print("--- Generating Welcome Message ---")
-        response = AIMessage(content=WELCOME_MSG)
-    else:
-        # Normal operation: Invoke the master LLM for routing/response
-        print("--- Calling Master Router LLM ---")
-        # Always invoke with the system message + current history
-        print(f"--- Message going to the llm_master: {messages}---")
-        #messages_with_system = [{"type": "system", "content": MIRNA_ASSISTANT_SYSTEM_MESSAGE}] + state["messages"]
-        response = llm_master.invoke(str(MIRNA_ASSISTANT_SYSTEM_MESSAGE) + str(state["messages"]))
-        if "***ANSWER_DIRECTLY***" in response.content.strip():
-            #response = llm_master.invoke([ORIGINAL_MIRNA_SYSINT_CONTENT_MESSAGE] + messages)
-            response.content = response.content.replace("***ANSWER_DIRECTLY***", "")
-            answer = response.content
-        print(f"--- Master Router Raw Response: {response.content} ---")
-
-    # Update state
-    state = state | {
-        #"messages": response.content , # Add the router's decision/response
-        "messages": AIMessage(content=response.content), # Add the router's decision/response
-        "answer": answer, # Update answer with the router's response
-        "finished": state.get("finished", False), # Use .get for safety
-    }
-    return state
 SQL_QUERIES = {}
     
 
 
-
+master_node = ChatbotNode(llm=LLM, instructions=MIRNA_ASSISTANT_SYSTEM_MESSAGE)
 literature_search_node = LiteratureNode(llm=LLM, functions=LiteratureTools)
 plot_node = PlotNode(llm=LLM_PLOT, instructions=PLOT_INSTRUCTIONS)
 sql_node = SQLNode(llm=LLM_SQL, instructions=SQL_INSTRUCTIONS, functions=db_tools)
@@ -267,27 +239,27 @@ def route_after_human(state: GraphState) -> Literal["chatbot_router", "__end__"]
     Otherwise, directs the conversation to the main chatbot.
     """
     return END
-    #print("\n--- ROUTING: route_after_human ---")
-    if state.get("finished", False):
-        #print("--- Routing: Human to END ---")
-        return END
-    else:
-        #print("--- Routing: Human to Chatbot ---")
-        return CHATBOT_NODE
+
 
 # Router 2: After the Main Chatbot/Router (`chatbot_with_tools`)
-def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "literature_search_node","human_node", "__end__"]:
+def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "literature_search_node","human_node", "chatbot_router",  "__end__"]:
     """
     Inspects the last message from the main chatbot (`chatbot_with_tools`)
     and decides where to route the conversation next.
     """
     print("\n--- ROUTING: route_chatbot_decision ---")
-    messages: List[BaseMessage] = state['messages']
+    logging.info("Routing decision based on the last message from the chatbot.")
+    print (f"--- Current state: {state} ---")
+    logging.info(f"--- Current state: {state} ---")
+    messages: List[BaseMessage] = state['request']
+    logging.info(f"--- Messages in state: {messages} ---")
     if not messages:
         #print("--- Routing Error: No messages found in route_chatbot_decision ---")
         return END # Or raise error
-
-    last_message = messages
+    if isinstance(messages, list):
+        last_message = messages[-1]
+    else:
+        last_message = messages
     if not isinstance(last_message, AIMessage) :
         print(f"--- Routing Warning: Expected AIMessage, got {type(last_message)}. Routing to Human. ---")
         #return HUMAN_NODE
@@ -296,6 +268,7 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
         content = last_message.content.strip()
     
     # Check for routing keywords first
+    
     if "***ROUTE_TO_SQL***" in content:
         print("--- Routing: Master Router to SQL Processor ---")
         return SQL_NODE
@@ -303,36 +276,28 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
         #print("--- Routing: Master Router to Literature Searcher ---")
         # state['messages'][-1].content = "Okay, I need to search the literature for that."
         return LITERATURE_NODE
-    elif "***FINISH***" in content or state.get("finished"): # Check flag too
-        #print("--- Routing: Master Router to END ---")
-        return END
-    elif "***ANSWER_DIRECTLY***" in content:
-        content = content.replace("***ANSWER_DIRECTLY***", "")
-        print(f"--- The answer directly was: {content}")
-         #print("--- Routing: Master Router to Human (Direct Answer) ---")
-         # Remove the keyword itself before showing to human
-        #  state['messages'][-1].content = content.replace("***ANSWER_DIRECTLY***", "").strip()
-        #  # If the content is *only* the keyword, maybe add a placeholder?
-        #  #if not state['messages'][-1].content:
-        #  x = state['messages'][-2].content[0]['text']
-        #  print(f"\n\n\n\nThis is the message puto!!!{x}\n\n\n\n")
-        #  #print (f"--- The messages directly was: {x}")
-        #  answer = llm_master.invoke(x) #"Okay, let me answer that." # Or similar
-        state['messages'].content = str(content)
-        #  #print (f"--- The answer directly was: {answer}")
-        state['answer'] = str(content)#.response.candidates[0].content.parts[0].text
-        print(f"\n\n\n BEFORE CALLING HUMAN NODE \n\n\n\n")
-        return HUMAN_NODE
     elif "***PLOT***" in content:
         #print("---- Routing to plot node ----")
         return PLOT_NODE
+    
+    elif "***ANSWER_DIRECTLY***" in content:
+        content = content.replace("***ANSWER_DIRECTLY***", "")
+        print(f"--- The answer directly was: {content}")
+        state['messages'].content = str(content)
+        #  #print (f"--- The answer directly was: {answer}")
+        state['answer'] = str(content)#.response.candidates[0].content.parts[0].text
+        print(f"\n\n\n After Answer directly before returning to finihs \n\n\n\n")
+        return CHATBOT_NODE
+    elif "***FINISH***" in content or state.get("finished"): # Check flag too
+        # remove the finish keyword
+        content = content.replace("***FINISH***", "")
+        
+        
+        #print("--- Routing: Master Router to END ---")
+        return END
     else:
-         # Assume it's a direct answer or clarification question if no keyword is found
-         #print("--- Routing: Master Router to Human (Direct Answer) ---")
-         # Remove potential keywords just in case they were missed but shouldn't be shown
-         state['messages'].content = content.replace("***ROUTE_TO_SQL***", "").replace("***ROUTE_TO_LITERATURE***", "").replace("***FINISH***", "").replace("***ANSWER_DIRECTLY***", "").strip()
-         print(f"\n\n\n BEFORE CALLING HUMAN NODE  (2) \n\n\n\n")
-         return HUMAN_NODE
+        print(f"\n\n\n BEFORE ENDING \n\n\n\n")
+        return CHATBOT_NODE
 
 # Router 3: After a Specialist Processor Node (`sql_processor_node`, `literature_search_node`)
 def route_processor_output(state: GraphState) -> Literal["chatbot_router","human_node", "__end__"]:
@@ -341,30 +306,22 @@ def route_processor_output(state: GraphState) -> Literal["chatbot_router","human
     Routes to 'tools' if a tool call was made (e.g., query_database, ground_search).
     Routes to 'human_node' if a final synthesized answer was provided.
     """
-    print("\n--- ROUTING: route_processor_output ---")
+    logging.info("\n--- ROUTING: route_processor_output ---")
     messages: List[BaseMessage] = state['messages']
     if not messages:
         #print("--- Routing Error: No messages found in route_processor_output ---")
         return END
 
     last_message = messages
-
-    #if not isinstance(last_message, AIMessage):
-    #    print(f"--- Routing Warning: Expected AIMessage from processor, got {type(last_message)}. Routing to Human. ---")
-    #    return HUMAN_NODE
-    # Otherwise, the processor provided its final synthesized answer
-    #else:
-    #    print("--- Routing: Processor to Human ---")
     return CHATBOT_NODE
         
 def route_after_tools(state: GraphState) -> Literal["sql_processor_node", "literature_search_node","human_node"]:
     """ Routes back to the specialist node that originally called the tool OR to human if unclear."""
-    #print("\n--- ROUTING: route_after_tools ---")
+    logging.info("\n--- ROUTING: route_after_tools ---")
     messages = state['messages']
     # The last message is the ToolMessage with results
     # The second to last message *should* be the AIMessage that made the tool call
     if len(messages) < 2:
-         #print("--- Routing Warning: Tool execution happened without prior AI message? Routing to Human. ---")
          return HUMAN_NODE # Should not happen
 
     ai_message_that_called_tool = messages[-2]
@@ -378,16 +335,16 @@ def route_after_tools(state: GraphState) -> Literal["sql_processor_node", "liter
     called_tool_names = {call['name'] for call in ai_message_that_called_tool.tool_calls}
 
     if any(name in db_tool_names for name in called_tool_names):
-         #print("--- Routing: Tools back to SQL Processor ---")
-         return SQL_NODE
+        logging.info(f"--- Routing: Tool call was from SQL LLM. Called tools: {called_tool_names} ---")
+        return SQL_NODE
     # Check if the tool call was Google Search (handled implicitly by LangChain for native tools)
     elif any(call['name'].lower() == 'googlesearchretrieval' for call in ai_message_that_called_tool.tool_calls):
-         #print("--- Routing: Tools back to Literature Searcher ---")
-         return LITERATURE_NODE
+        logging.info(f"--- Routing: Tool call was from Literature Search LLM. Called tools: {called_tool_names} ---")
+        return LITERATURE_NODE
     else:
          # Fallback if the origin is unclear
-         #print(f"--- Routing Warning: Tool caller unclear ({called_tool_names}). Routing to Human. ---")
          # Add a message indicating confusion?
+         logging.warning(f"--- Routing Warning: Unclear which process should handle the tool results. Called tools: {called_tool_names} ---")
          state['messages'].append(SystemMessage(content="(System: Unclear which process should handle the tool results. Displaying results directly.)"))
          return HUMAN_NODE
     
@@ -399,7 +356,7 @@ workflow = StateGraph(GraphState)
 
 # Add Nodes
 workflow.add_node(HUMAN_NODE, human_node)
-workflow.add_node(CHATBOT_NODE, chatbot_with_tools)
+workflow.add_node(CHATBOT_NODE, master_node.get_node)
 workflow.add_node(SQL_NODE, sql_node.get_node)
 workflow.add_node(LITERATURE_NODE, literature_search_node.get_node)
 workflow.add_node(TOOL_NODE, tool_node)
@@ -411,15 +368,13 @@ workflow.add_node(PLOT_NODE, plot_node.get_node)
 # 1. Entry Point (Where the graph starts)
 workflow.set_entry_point(CHATBOT_NODE) # Start with a hello input
 
+# Add direct edges
+workflow.add_edge(PLOT_NODE, CHATBOT_NODE)
+workflow.add_edge(SQL_NODE, CHATBOT_NODE)
+workflow.add_edge(LITERATURE_NODE, CHATBOT_NODE)
+workflow.add_edge(HUMAN_NODE,END)
 # 2. From Human Node
-workflow.add_conditional_edges(
-    HUMAN_NODE,
-    route_after_human, # Function to decide next step
-    {
-        CHATBOT_NODE: CHATBOT_NODE, # If function returns "chatbot_with_tools", go there
-        END: END                   # If function returns "__end__", finish
-    }
-)
+
 
 # 3. From Main Chatbot Node
 workflow.add_conditional_edges(
@@ -431,30 +386,9 @@ workflow.add_conditional_edges(
         TOOL_NODE: TOOL_NODE,               # Route to execute chatbot's tools (get_menu)
         HUMAN_NODE: HUMAN_NODE,             # Route to show chatbot's direct answer
         PLOT_NODE: PLOT_NODE,              # Route to plot node
+        CHATBOT_NODE: CHATBOT_NODE,         # Route back to chatbot for further processing
         END: END                           # Route to end (though usually handled via human)
     }
-)
-
-# 4. From SQL Processor Node
-workflow.add_conditional_edges(
-    SQL_NODE,
-    route_processor_output, # Function to decide based on SQL processor output
-    {
-        CHATBOT_NODE: CHATBOT_NODE, # Route to main chatbot (if needed)
-        TOOL_NODE: TOOL_NODE,   # Route to execute SQL tools (query_database)
-        HUMAN_NODE: HUMAN_NODE  # Route to show final SQL answer
-    }
-)
-
-# 5. From Literature Search Node
-workflow.add_conditional_edges(
-   LITERATURE_NODE,
-   route_processor_output, # Function to decide based on Literature processor output
-   {
-        HUMAN_NODE: HUMAN_NODE,
-        CHATBOT_NODE: CHATBOT_NODE, # Route to main chatbot (if needed)
-        END : END  # Route to show final literature answer
-   }
 )
 
 # 6. From Tool Node - Route back to the appropriate processor
@@ -467,10 +401,6 @@ workflow.add_conditional_edges(
         HUMAN_NODE: HUMAN_NODE # Fallback route
     }
 )
-
-
-workflow.add_edge(PLOT_NODE, END)
-
 
 
 # define state

@@ -19,6 +19,7 @@ class Instructions(Enum):
     router='ROUTING'
     welcome='WELCOME_MSG'
     plot='PLOT'
+    format_answer='FORMAT_ANSWER'
 
    # We don't need to override __init__ or modify self.value
     def get_instruction(self):
@@ -29,4 +30,6 @@ class Instructions(Enum):
         elif self == Instructions.plot:
             return instructions[f"{self.plot.value}_INSTRUCTIONS"]
         else:
-            raise ValueError(f"Unknown instruction type: {self.value}")
+            return instructions[f"{self.value}_INSTRUCTIONS"]
+        #else:
+        #    raise ValueError(f"Unknown instruction type: {self.value}")
