@@ -38,6 +38,7 @@ class PlotNode(node):
         config_with_code = types.GenerateContentConfig(
             #tools=[types.Tool(code_execution=types.ToolCodeExecution())],
             temperature=0.0,
+            system_instruction= self.instructions,
             response_schema= self.schema,
             response_mime_type="application/json"
         )
@@ -67,9 +68,7 @@ class PlotNode(node):
         """
         This function will take the answer and proceed to convert to json
         """
-        response_json = {}
-        if isinstance(response_plot, json):
-            response_json = response_plot
+        response_json = response_plot
         if isinstance(response_plot, str):
             response_json = json.loads(response_plot)
         return response_json
@@ -80,10 +79,10 @@ class PlotNode(node):
         queries = SQL_QUERIES # state['table']
 
         response_plot = self.run_model(str(queries) + self.instructions + messages.content)
-        response_json = self.extract_response(response_plot=response_plot)
-        plot = self.run_code_plot(response_json.code)
-        
-        answer = response_json.caption
+        response_json = self.extract_response(response_plot=response_plot.text)
+        plot = self.run_code_plot(response_json["code"])
+        note = response_json["notes"]
+        answer = response_json["caption"]
 
         answer_b = answer
         if plot:
@@ -100,10 +99,10 @@ class PlotNode(node):
         history = state.get("history", [])
         return {**state,
                 "messages": AIMessage(content=""),
-                "answer": answer_b,
-                "request": AIMessage(content=answer_b),
+                "answer": AIMessage(content=answer_b),
+                "request": AIMessage(content=note),
                 "answer_source": 'PlotNode',
-                "history": history + [messages], # Update history with the new message
+                "history": history + [AIMessage(content=answer_b)], # Update history with the new message
             }
     
     

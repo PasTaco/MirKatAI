@@ -14,6 +14,9 @@
 import os, sys
 import pickle
 import json
+
+import pytest
+
 import app.nodes as nodes
 
 master_node = nodes.master_node
@@ -34,18 +37,18 @@ def test_plot_run_model_json():
     result_content = result.text
     # convert rest of the content to json
     result_json = json.loads(result_content)
-    # chech that result_json has the keys caption, code and notes
+    # check that result_json has the keys caption, code and notes
     assert "caption" in result_json
     assert "code" in result_json
     assert "notes" in result_json
-    # save result in pickle
-    with open("../dummy_files/plot_result.pkl", "wb") as f:
-        pickle.dump(result, f)
+    assert "figure" in result_json['code'], "The final figure must be saved on variable figure"
 
 
 
+#@pytest.mark.skip("This test don't do anything.")
 def test_temporal():
     result = pickle.load(open("../dummy_files/plot_result.pkl", "rb"))
+    result_text = result.text
     print(result)
 
 

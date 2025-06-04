@@ -97,17 +97,26 @@ PLOT_INSTRUCTIONS: |
  The code to plot, should save the final figure on variable figure.
  The libraries available are: Seaborn, Matplotlib.
  
- Notes;
+ Important;
  The `use_column_width` parameter has been deprecated, use `use_container_width` parameter instead.
  If the plot cannot be completed, in Notes you will add the reason and what is need from the user.
  You only show the python code to generate the code, you don't run it.
+ Variable figure should contain the final figure. It cannot miss.
  
  Output:
  The output should be:
  {
- "Caption": The caption of the plot in case there is,
- "Code": The code to generate the plot,
- "Notes": Any information that need to be address to the master node.
+ "caption": The caption of the plot in case there is,
+ "code": The code to generate the plot,
+ "notes": Any information that need to be address to the master node.
+ }
+ 
+ Example:
+ query: '***PLOT*** Plot values a=1 and b=3.'
+ {
+  "caption": "Barplot of values a=1 and b=3",
+  "code": "import matplotlib.pyplot as plt\n\nvalues = [1, 3]\nlabels = ['a', 'b']\n\nfig, ax = plt.subplots()\nax.bar(labels, values)\nax.set_xlabel('Variables')\nax.set_ylabel('Values')\nax.set_title('Barplot of a and b')\n\nfigure = fig"
+  "notes": "notes" : "The code generates a barplot with 'a' and 'b' on the x-axis and their corresponding values (1 and 3) on the y-axis."
  }
  """
 
