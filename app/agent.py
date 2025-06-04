@@ -1,55 +1,9 @@
-# original libraries
-from langchain_core.messages import BaseMessage
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import tool
-from langchain_google_vertexai import ChatVertexAI
-from langgraph.graph import END, MessagesState, StateGraph
-from langgraph.prebuilt import ToolNode
-import os, sys
-current_path = os.path.dirname(os.path.abspath(__file__))
-print(f"Current path: {current_path}")
-
-# import libraries
-import pandas as pd
-
-from pprint import pprint
-from typing import Any, Dict, List, Literal, Optional, TypedDict # Grouped and sorted alphabetically
-from pprint import pformat
-from app.mirkat.instructions import Instructions
-from app.mirkat.sql_functions import (
-    MySqlConnection,
-    DBTools
-)
-import re
-from app.mirkat.literature_functions import LiteratureTools
-from app.mirkat.plot_functions import PlotFunctons
-
-# langchain and google ai specific libraries
-from google.genai.types import GenerateContentResponse
-from google.genai import types
-from google import genai
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import ( # Grouped message types
-    AIMessage,
-    BaseMessage,
-    HumanMessage,
-    SystemMessage
-    # ToolMessage is implicitly handled by LangGraph/ToolNode
-)
-from langchain_core.tools import tool # Decorator for creating LangChain tools
-from langgraph.graph import END, StateGraph # Core graph builder and end state marker
-from langgraph.prebuilt import ToolNode   
-import google.ai.generativelanguage as genai_types
-import base64
-import io
-## load env variables and set up gemini API key:
-import json
-from dotenv import load_dotenv
-from app.mirkat.node_chatbot import ChatbotNode
-from app.mirkat.node_literature import LiteratureNode
-from app.mirkat.node_plot import PlotNode
-from app.mirkat.node_sql import SQLNode
+# Standard libraries
+import os
 import logging
+from typing import Any, Dict, List, Literal, Optional, TypedDict
+
+# Logging configuration
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -58,124 +12,45 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+
+# Environment variables
+from dotenv import load_dotenv
+
+# LangChain and Google AI specific libraries
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage
+)
+from google.genai.types import GenerateContentResponse
+from langchain_core.tools import tool
+
+# LangGraph specific libraries
+from langgraph.graph import END, StateGraph
+
+# Application-specific imports
+import app.nodes as nodes
+from  app.mirkat.graph_state import GraphState
+
+# Current path
+current_path = os.path.dirname(os.path.abspath(__file__))
+print(f"Current path: {current_path}")
 # Load .env file
 load_dotenv()
 
-# Get the API key
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-
-LOCATION = "europe-west1"
-LLM_ROUTE = "gemini-1.5-flash"
-LLM = "gemini-2.0-flash"
-LLM_SQL = "gemini-2.5-flash-preview-04-17"
-LLM_PLOT = "gemini-2.0-flash"
-
-#LLM = "gemini-2.0-flash-lite"
 
 
+# Nodes
 
-
-
-# istantiate llms for nodes
-
-llm_master = ChatGoogleGenerativeAI(model=LLM)
-llm_response = ChatGoogleGenerativeAI(model=LLM)
-
-###### define instructions for nodes
-
-
-MIRNA_ASSISTANT_SYSTEM_MESSAGE, WELCOME_MSG = Instructions.router.get_instruction()
-MIRNA_COMPLETE_ANSWER = Instructions.format_answer.get_instruction()
-SQL_INSTRUCTIONS = Instructions.sql.get_instruction()
-PLOT_INSTRUCTIONS = Instructions.plot.get_instruction()
-
-### SQL tables descriptions
-
-# import tables with descriptonf of MiRkat DB
-mirkat_columns_desctiption = pd.read_csv('tables/mirkat_tables_columns_descriptions.csv')
-mirkat_tables_desctiption = pd.read_csv('tables/mirkat_tables_descriptions.csv')
-
-#### SQL connection
-
-config = {
-    'user': os.getenv('MIRKAT_USER'),
-    'password': os.getenv('MIRKAT_PASSWORD'),
-    'host': os.getenv('MIRKAT_HOST'),
-    'database': os.getenv('MIRKAT_DATABASE'),
-    'raise_on_warnings': True
-}
-
-mysql_connection = MySqlConnection(config)
-db_conn = mysql_connection.connect_sql()
-
-
-
-
-# Assume db_conn, mirkat_columns_description, and mirkat_tables_description are available
-db_tools_instance = DBTools(db_conn, mirkat_tables_desctiption, mirkat_columns_desctiption)
-
-# OR you can make a list of methods if you want:
-db_tools = [
-    db_tools_instance.list_tables,
-    db_tools_instance.get_table_schema,
-    db_tools_instance.describe_columns,
-    db_tools_instance.describe_tabes,
-    db_tools_instance.execute_query
-]
-
-
-
-##### Define SQL agent
-
-client = genai.Client(api_key=GOOGLE_API_KEY)
-
-config_tools = types.GenerateContentConfig(
-    system_instruction=SQL_INSTRUCTIONS,
-    tools=db_tools,
-    temperature=0.0,
-    )
-
-# Start a chat with automatic function calling enabled.
-chat = client.chats.create(
-    model=LLM_SQL,
-    config=config_tools,
-)
-
-
-##### Configure literature research agent
-
-config_with_search = types.GenerateContentConfig(
-        tools=[types.Tool(google_search=types.GoogleSearch())],
-)
-
-
-#### configure plotting node
-
-config_with_code = types.GenerateContentConfig(
-    tools=[types.Tool(code_execution=types.ToolCodeExecution())],
-    temperature=0.0,
-)
-
-plotter_model = client.chats.create(model=LLM, config=config_with_code)
-
+master_node = nodes.master_node
+literature_search_node = nodes.literature_search_node
+plot_node = nodes.plot_node
+sql_node = nodes.sql_node
+tool_node = nodes.tool_node
 
 
 # start defininf graph
-
-
-class GraphState(TypedDict):
-    messages: List[BaseMessage]
-    table: Optional[Dict[str, Any]]
-    answer: str
-    bibliography: list
-    research_queries: list
-    finished: bool
-    original_query: Optional[HumanMessage]
-    request: Optional[AIMessage]
-    answer_source: Optional[str]
-    trys: int
-    history: List[BaseMessage] 
-
 
 
 # define nodes
@@ -197,21 +72,6 @@ def human_node(state: GraphState) -> GraphState:
     print("="*30)
     return state
    
-
-SQL_QUERIES = {}
-    
-
-
-master_node = ChatbotNode(llm=LLM, instructions=MIRNA_ASSISTANT_SYSTEM_MESSAGE)
-literature_search_node = LiteratureNode(llm=LLM, functions=LiteratureTools)
-plot_node = PlotNode(llm=LLM_PLOT, instructions=PLOT_INSTRUCTIONS)
-sql_node = SQLNode(llm=LLM_SQL, instructions=SQL_INSTRUCTIONS, functions=db_tools)
-all_tools = db_tools # Add literature search tools here if they were LangChain tools
-tool_node = ToolNode(all_tools)
-
-
-
-
 
 # Define node names for clarity
 HUMAN_NODE = "human_node"
@@ -410,7 +270,12 @@ initial_state = {
     "messages": [], # <-- Empty list
     "table": None,
     "answer": "",
-    "finished": False
+    "finished": False,
+    "request": None,
+    "original_query": "",
+    "answer_source": "Human",
+    "trys": 0,
+    "history": [] 
 }
 current_state = initial_state
 config = {"recursion_limit": 100}

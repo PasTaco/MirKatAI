@@ -39,7 +39,7 @@ class node:
         self.welcome = welcome
         self.client = genai.Client(api_key=GOOGLE_API_KEY)
         self.logging_key = logging_key
-    def get_node():
+    def get_node(self, state):
         return None
     def log_message(self, message):
         """Log the message to the console."""
