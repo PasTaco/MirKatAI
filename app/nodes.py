@@ -25,7 +25,10 @@ from app.mirkat.sql_functions import (
     DBTools
 )
 from app.mirkat.literature_functions import LiteratureTools
-from langgraph.prebuilt import ToolNode   
+from langgraph.prebuilt import ToolNode
+
+
+current_path = os.path.dirname(os.path.abspath(__file__))
 
 
 
@@ -51,10 +54,18 @@ PLOT_INSTRUCTIONS = Instructions.plot.get_instruction()
 ##### Specific for SQL NODE
 
 ### SQL tables descriptions
-
-# import tables with descriptonf of MiRkat DB
-mirkat_columns_desctiption = pd.read_csv('tables/mirkat_tables_columns_descriptions.csv')
-mirkat_tables_desctiption = pd.read_csv('tables/mirkat_tables_descriptions.csv')
+pwd = os.getcwd()
+# import tables with description of MiRKat DB
+# the if else is so it can work on the pyCharm tests
+if "tests" in pwd:
+    mirkat_columns_desctiption = pd.read_csv('../../tables/mirkat_tables_columns_descriptions.csv')
+    mirkat_tables_desctiption = pd.read_csv('../../tables/mirkat_tables_descriptions.csv')
+elif pwd.endswith("app"):
+    mirkat_columns_desctiption = pd.read_csv('../tables/mirkat_tables_columns_descriptions.csv')
+    mirkat_tables_desctiption = pd.read_csv('../tables/mirkat_tables_descriptions.csv')
+else:
+    mirkat_columns_desctiption = pd.read_csv('tables/mirkat_tables_columns_descriptions.csv')
+    mirkat_tables_desctiption = pd.read_csv('tables/mirkat_tables_descriptions.csv')
 
 #### SQL connection
 
@@ -86,3 +97,4 @@ plot_node = PlotNode(llm=LLM_PLOT, instructions=PLOT_INSTRUCTIONS)
 sql_node = SQLNode(llm=LLM_SQL, instructions=SQL_INSTRUCTIONS, functions=db_tools)
 all_tools = db_tools # Add literature search tools here if they were LangChain tools
 tool_node = ToolNode(all_tools)
+
