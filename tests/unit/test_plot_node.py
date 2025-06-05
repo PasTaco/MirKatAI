@@ -53,10 +53,10 @@ def test_plot_get_node(monkeypatch) -> None:
             }'''
     status = {
         "messages": "",
-        "request":  AIMessage(content="***ROUTE_TO_PLOT_NODE*** Plot A=1, B=2"),
+        "request":  AIMessage(content="***ROUTE_TO_PLOT_NODE*** Plot A=1, B=3"),
         "table": "data",
         "answer": "",
-        "original_query": "Plot A=1, B=2",
+        "original_query": "Plot A=1, B=3",
         "finished": False
     }
     print(current_path)

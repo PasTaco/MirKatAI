@@ -30,6 +30,7 @@ from app.agent_engine_app import AgentEngineApp
 from google.genai.types import Candidate, Content,Part, GenerateContentConfig, GenerateContentResponse
 #from app.mirkat.node_constructor import SQLNode, ChatbotNode
 from app.mirkat.node_sql import SQLNode
+from app.mirkat.node_plot import PlotNode
 from app.mirkat.node_chatbot import ChatbotNode
 from app.mirkat.node_literature import LiteratureNode
 from langchain_core.messages import ( # Grouped message types
@@ -41,6 +42,7 @@ from langchain_core.messages import ( # Grouped message types
 )
 from app import agent
 from unittest.mock import patch, MagicMock
+import pickle
 
 
 
@@ -167,6 +169,62 @@ def test_agent_feedback(agent_app: AgentEngineApp) -> None:
 
     logging.info("All assertions passed for agent feedback test")
 
+
+def test_master_plot_master_nodes(monkeypatch, agent_app) -> None:
+    """
+    This test check that the message from the master,
+    to the plto and returning to the master, gives the correct
+    behaivor (fininlize)
+    """
+
+    try:
+        response_plot = pickle.load(open("test/dummy_files/plot_result.pkl", "rb"))
+    except FileNotFoundError as e:
+        response_plot = pickle.load(open("../dummy_files/plot_result.pkl", "rb"))
+    monkeypatch.setattr(PlotNode, "run_model", lambda *args, **kwargs:response_plot)
+    monkeypatch.setattr(ChatbotNode, "run_model", lambda *args, **kwargs:AIMessage(content='***PLOT*** Plot A=1, B=3'))
+    input_dict = {
+        "messages": [
+            {"type": "human", "content":
+                "Barplot of values a=1 and b=3"},
+        ],
+        "table": None,
+        "answer": None,
+        "finished": False,
+        "user_id": "test-user",
+        "session_id": "test-session",
+    }
+
+    events = list(agent_app.stream_query(input=input_dict))
+
+    assert len(events) > 0, "Expected at least one chunk in response"
+
+    # Verify each event is a tuple of message and metadata and that there is binary image
+    binary_image = False
+    for event in events:
+        assert isinstance(event, list), "Event should be a list"
+        assert len(event) == 2, "Event should contain message and metadata"
+        message, _ = event
+
+        # Verify message structure
+        assert isinstance(message, dict), "Message should be a dictionary"
+        assert message["type"] == "constructor"
+        assert "kwargs" in message, "Constructor message should have kwargs"
+        kwargs = message["kwargs"]
+        print(kwargs)
+        assert "content" in kwargs, "Content should be in kwargs"
+        if "binary_image" in kwargs['content']:
+            binary_image = True
+    assert binary_image, "Binary image should be in the message"
+
+    # Verify at least one message has content
+    has_content = False
+    for event in events:
+        message = event[0]
+        if message.get("type") == "constructor" and "content" in message["kwargs"]:
+            has_content = True
+            break
+    assert has_content, "At least one message should have content"
 
 
 @pytest.mark.skip(reason="Plot needs to be fixed")

@@ -80,7 +80,8 @@ class PlotNode(node):
 
         response_plot = self.run_model(str(queries) + self.instructions + messages.content)
         response_json = self.extract_response(response_plot=response_plot.text)
-        plot = self.run_code_plot(response_json["code"])
+        code = response_json["code"]
+        plot = self.run_code_plot(code)
         note = response_json["notes"]
         answer = response_json["caption"]
 
@@ -96,13 +97,14 @@ class PlotNode(node):
             buf.close()
             # response_plot.candidates[0].content.parts[0].text =  f"binary_image: {image_base64}"
             answer_b = answer + f"binary_image: {image_base64}"
+            answer = answer + " using code: " + code
         history = state.get("history", [])
         return {**state,
                 "messages": AIMessage(content=""),
                 "answer": AIMessage(content=answer_b),
                 "request": AIMessage(content=note),
                 "answer_source": 'PlotNode',
-                "history": history + [AIMessage(content=answer_b)], # Update history with the new message
+                "history": history + [AIMessage(content=answer)], # Update history with the new message
             }
     
     
