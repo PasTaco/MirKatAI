@@ -152,7 +152,7 @@ FORMAT_ANSWER_INSTRUCTIONS: |
       `If complete, respond with:`,
       {
         `answer`: `YES`,
-        `return`: `A clear, formatted, and self-contained answer to the originial question.`
+        `return`: `A clear, formatted, and self-contained answer to the original question.`
       },
       
       `If incomplete, respond with:`,
