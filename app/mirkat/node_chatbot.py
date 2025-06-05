@@ -30,6 +30,7 @@ class ChatbotNode(node):
         return response
     def run_model_for_compleatness(self, message_str:str):
         """Run the model to check if the answer is complete."""
+        self.log_message("Waiting for model to check if answer is complete.")
         response = self.llm_master.invoke( str(self.complete_answer)+ message_str)
         return response
 
@@ -59,7 +60,6 @@ class ChatbotNode(node):
         is_compleate = self.run_model_for_compleatness(message_str)
         self.log_message(f"Response from completeness check: {is_compleate.content}")
         cleaned = self.extract_json_from_markdown(content= is_compleate.content)
-        #cleaned = re.sub(r"^```json\s*|\s*```$", "", is_compleate.content.strip())
         self.log_message(f"Cleaned response: {cleaned}")
         return json.loads(cleaned)
 

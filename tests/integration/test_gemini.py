@@ -138,9 +138,10 @@ def test_check_compleatness_model_from_plot_json():
     # Optional: check expected substrings in return
     assert "binary_image" in response_data["return"], "'return' explanation must mention 'binary_image'."
 
-#@pytest.mark.skip("This test don't do anything.")
+@pytest.mark.skip("This test don't do anything.")
 def test_temporal():
     result = pickle.load(open("../dummy_files/plot_result.pkl", "rb"))
+    result = pickle.load(open("../dummy_files/completes_plot_result.pkl", "rb"))
     result_text = result.text
     print(result)
 

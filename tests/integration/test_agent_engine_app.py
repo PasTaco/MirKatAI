@@ -22,7 +22,8 @@ if current_path.endswith("app"):
 #    sys.path.append("../")
 #    sys.path.append("../app")
 import logging
-
+import re
+import base64
 import pytest
 
 from app.agent_engine_app import AgentEngineApp
@@ -177,11 +178,26 @@ def test_master_plot_master_nodes(monkeypatch, agent_app) -> None:
     behaivor (fininlize)
     """
 
+    def extract_potential_base64_blocks(text: str, min_length: int = 100):
+        # Find long base64-looking strings: A-Z, a-z, 0-9, +, /, =
+        return re.findall(r"[A-Za-z0-9+/=]{%d,}" % min_length, text)
+
+    def is_base64_image_string(s: str) -> bool:
+        try:
+            decoded = base64.b64decode(s, validate=True)
+            return decoded.startswith(b'\x89PNG\r\n\x1a\n') or decoded.startswith(b'\xff\xd8')  # PNG or JPEG
+        except Exception as e:
+            return False
+
     try:
         response_plot = pickle.load(open("test/dummy_files/plot_result.pkl", "rb"))
+        response_complete = pickle.load(open("test/dummy_files/completes_plot_result.pkl", "rb"))
     except FileNotFoundError as e:
         response_plot = pickle.load(open("../dummy_files/plot_result.pkl", "rb"))
+        response_complete = pickle.load(open("../dummy_files/completes_plot_result.pkl", "rb"))
+
     monkeypatch.setattr(PlotNode, "run_model", lambda *args, **kwargs:response_plot)
+    monkeypatch.setattr(ChatbotNode, "run_model_for_compleatness", lambda *args, **kwargs: response_complete)
     monkeypatch.setattr(ChatbotNode, "run_model", lambda *args, **kwargs:AIMessage(content='***PLOT*** Plot A=1, B=3'))
     input_dict = {
         "messages": [
@@ -204,8 +220,7 @@ def test_master_plot_master_nodes(monkeypatch, agent_app) -> None:
     for event in events:
         assert isinstance(event, list), "Event should be a list"
         assert len(event) == 2, "Event should contain message and metadata"
-        message, _ = event
-
+        message, metadata = event
         # Verify message structure
         assert isinstance(message, dict), "Message should be a dictionary"
         assert message["type"] == "constructor"
@@ -215,16 +230,8 @@ def test_master_plot_master_nodes(monkeypatch, agent_app) -> None:
         assert "content" in kwargs, "Content should be in kwargs"
         if "binary_image" in kwargs['content']:
             binary_image = True
-    assert binary_image, "Binary image should be in the message"
-
-    # Verify at least one message has content
-    has_content = False
-    for event in events:
-        message = event[0]
-        if message.get("type") == "constructor" and "content" in message["kwargs"]:
-            has_content = True
             break
-    assert has_content, "At least one message should have content"
+    assert binary_image, "Binary image should be in the message"
 
 
 @pytest.mark.skip(reason="Plot needs to be fixed")

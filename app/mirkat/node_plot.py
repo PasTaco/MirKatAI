@@ -78,7 +78,7 @@ class PlotNode(node):
         self.log_message(f"Messages received in PlotNode: {messages}")
         queries = SQL_QUERIES # state['table']
 
-        response_plot = self.run_model(str(queries) + self.instructions + messages.content)
+        response_plot = self.run_model(str(queries) + messages.content)
         response_json = self.extract_response(response_plot=response_plot.text)
         code = response_json["code"]
         plot = self.run_code_plot(code)
@@ -96,13 +96,13 @@ class PlotNode(node):
             image_base64 = base64.b64encode(buf.read()).decode('utf-8')
             buf.close()
             # response_plot.candidates[0].content.parts[0].text =  f"binary_image: {image_base64}"
-            answer_b = answer + f"binary_image: {image_base64}"
+            answer_b = answer + f" binary_image: {image_base64}"
             answer = answer + " using code: " + code
         history = state.get("history", [])
         return {**state,
                 "messages": AIMessage(content=""),
                 "answer": AIMessage(content=answer_b),
-                "request": AIMessage(content=note),
+                "request": AIMessage(content=note + answer_b),
                 "answer_source": 'PlotNode',
                 "history": history + [AIMessage(content=answer)], # Update history with the new message
             }

@@ -57,8 +57,8 @@ WELCOME_MSG : |
 
 SQL_INSTRUCTIONS : |
   """
-  You interact with an MySQL database
-  of microRNAs and its targets called mirkat. You will take the users questions and turn them into SQL
+  You are the SQL Node. You interact with an MySQL database
+  of microRNAs and its targets called miRKat. You will take the users questions and turn them into SQL
   queries. Once you have the information you need, you will
   return a Json object. 
 
@@ -88,6 +88,7 @@ SQL_INSTRUCTIONS : |
 
   human query: What are the seeds of the microRNAs that expressed in muscle and how many of those mirnas have said seed?
   sql_query: execute_query(SELECT ms.seed, COUNT(DISTINCT mt.mirna) FROM mirna_seeds ms JOIN mirna_mature mm ON ms.auto_mature = mm.mature_name JOIN mirna_pre_mature mpm ON mm.auto_mature = mpm.auto_mature JOIN mirna m ON mpm.auto_mirna = m.auto_mirna JOIN mirna_tissues mt ON m.mirna_ID = mt.mirna WHERE mt.organ = 'muscle' GROUP BY ms.seed
+ 
   """
 
 
@@ -128,7 +129,7 @@ FORMAT_ANSWER_INSTRUCTIONS: |
     `resources to follow up`: {
       `SQL_NODE` : `The SQL model that can query the miRKat database for structured data. It has microRNAs, targets, and other relevant information. If this is needed, you will specify that the mirkat dabase is needed`,
       `LITERATURE_NODE`: `This is the Google search model that can find relevant literature, papers, and articles related to microRNAs. It can provide functional information, mechanisms, and biological context.`, 
-      `PLOT_NODE`: `This node can generate plots using matplotlib and seaborn only.`
+      `PLOT_NODE`: `This node can generate plots using matplotlib and seaborn only. It needs to be given the explict values for the plots.`
     },
     `input_format`: {
       `original_query`: `The user's query`,
@@ -164,7 +165,9 @@ FORMAT_ANSWER_INSTRUCTIONS: |
       `Avoid repeating the same type of node more than twice unless new evidence or user input justifies it.`,
       `Prefer small and specific follow-ups (e.g., narrow queries to Literature or simple SQL checks) when expanding the answer.`,
       `If the answer already includes Literature but is incomplete, check SQL if it may contain relevant data.`,
-      `If the original query asks for a plot and there's no 'binary_image:', the answer is NO.`,
+      `If the original query asks for a plot and there's no 'binary_image':, the answer is NO.`,
+      'If the source is Plot node, do not process anything after 'binary_code', just return the string as it is in the result.`,
+      `If there is need to go to the plot node, the values on the plot must be given as well.`,
       `If the query asks for a table and there is none, the answer is NO.`,
       `If the query is outside the scope of the models (e.g., clinical diagnostics), answer YES and explain why it cannot be addressed.`,
       `Use 'trys' to determine whether to continue iterating or to finalize the output. For example, if trys > try_limit and all nodes have been used meaningfully, return the best possible summary answer.`,
@@ -176,7 +179,7 @@ FORMAT_ANSWER_INSTRUCTIONS: |
       `Always return the result in strict JSON format with no extra explanations.`,
       `If the 'messages' include a line starting with 'binary_image:', preserve it exactly as it is in the final response.`,
       `If the LITERATURE model is the answer source, include the list of references it provides in the final output.`,
-      `Keep follow up instructions as imperative givin all the information needed for the next model to take the task.`,
+      `Keep follow up instructions as imperative given all the information needed for the next model to take the task.`,
       `If there is a ground search, a sql call or a plot missing, the answer is NO`,
       `If the original query ask for plots and there is not a binary_image, the answer is NO`,
       `If the original query ask for a table and there is not a table, the answer is NO`,
