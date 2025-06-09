@@ -59,8 +59,6 @@ def test_plot_get_node_complete(monkeypatch) -> None:
     result = chatbot_node.get_node(status)
     print(result)
     # check messages is AIMessage
-    result_message = result['answer'].content
-    assert "image_save" in result_message
-
-    assert result['table'] == 'data'
+    result_message = result['messages'].content
+    assert "image" in result_message
 

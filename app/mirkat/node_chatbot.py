@@ -100,21 +100,14 @@ class ChatbotNode(node):
 
             answer = dict_answer.get("answer")
             returned_answer = dict_answer.get("return")
-            media = dict_answer.get("media",None)
-            if media:
-                media = media.replace("<image_save>", "")
-                media = media.replace("</image_save>", "")
-                print(pwd)
-                plot = svg2rlg(media)
-                #returned_answer = returned_answer + plot
             self.log_message(f"Returned answer: {returned_answer}")
             compleate = answer == "YES"
             if compleate:
                 #returned_answer = "***FINISH***" + returned_answer
                 finished = True
 
-            messages =  AIMessage(content=f"****FINAL_RESPONSE**** {returned_answer}")
-            response = AIMessage(content="")
+            messages =  AIMessage(content=f"{returned_answer}")
+            response = AIMessage(content=f"{returned_answer}")
         else:
             #print(f"--- Getting response from the human ---")
             self.log_message(f"Getting question from the human")
@@ -147,7 +140,8 @@ class ChatbotNode(node):
         if compleate or trys > self.limit_trys:
             finished = True
             print(f"Final response is {messages.content}")
-            new_message = messages
+            new_message = AIMessage(content=f"****FINAL_RESPONSE**** {messages.content}")
+            response=AIMessage(content="")
             
         self.log_message(f"State before updating: {state}")
         self.log_message(f"Response: {response.content}")
@@ -156,7 +150,7 @@ class ChatbotNode(node):
         state = state | {
             #"messages": response.content , # Add the router's decision/response
             'messages':  new_message,
-            "request": AIMessage(content=response.content), # Add the router's decision/response
+            "request": response, # Add the router's decision/response
             "answer": answer, # Update answer with the router's response
             "finished": finished, # Use .get for safety
             "original_query": orginal_query, # Add the original query

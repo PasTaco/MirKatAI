@@ -217,7 +217,9 @@ def test_master_plot_master_nodes(monkeypatch, agent_app) -> None:
 
     # Verify each event is a tuple of message and metadata and that there is binary image
     binary_image = False
+    plot=""
     for event in events:
+
         assert isinstance(event, list), "Event should be a list"
         assert len(event) == 2, "Event should contain message and metadata"
         message, metadata = event
@@ -228,10 +230,17 @@ def test_master_plot_master_nodes(monkeypatch, agent_app) -> None:
         kwargs = message["kwargs"]
         print(kwargs)
         assert "content" in kwargs, "Content should be in kwargs"
-        if "binary_image" in kwargs['content']:
+        if binary_image:
+            plot = plot + kwargs['content']
+        if "<image>" in kwargs['content']:
             binary_image = True
+            plot = kwargs['content']
+        if "</image>" in kwargs['content']:
             break
-    assert binary_image, "Binary image should be in the message"
+    assert binary_image, "There should be the path for the image (plot)"
+    plot = plot.split('image')[1]
+    plot_file = plot.replace(">","").replace("</","")
+    os.remove(plot_file)
 
 
 @pytest.mark.skip(reason="Plot needs to be fixed")

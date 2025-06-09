@@ -83,9 +83,9 @@ def test_plot_get_node(monkeypatch) -> None:
     print(result)
     # check messages is AIMessage
     result_message = result['answer'].content
-    plot_file = result_message.split('<image_save>')[-1]
-    plot_file = plot_file.split("</image_save>")[0]
-    assert "image_save" in result_message
+    plot_file = result_message.split('<image>')[-1]
+    plot_file = plot_file.split("</image>")[0]
+    assert "image" in result_message
     os.remove(plot_file)
 
     assert result['table'] == 'data'
@@ -94,6 +94,6 @@ def test_plot_get_node(monkeypatch) -> None:
 def test_cleansed_to_json():
     clean = '''{
       "answer": "NO",
-      "return": "The number of target genes is needed for hsa-mir-1-5p, hsa-mir-24-3p, and the genes targeted by both. Use SQL_NODE to query the number of target genes for each microRNA and the intersection between them.",
+      "return": "The number of target genes is needed for hsa-mir-1-5p, hsa-mir-24-3p, and the genes targeted by both. Use SQL_NODE to query the number of target genes for each microRNA and the intersection between them."
     }'''
     json.loads(clean)

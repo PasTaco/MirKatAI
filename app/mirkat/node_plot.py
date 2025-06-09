@@ -84,6 +84,7 @@ class PlotNode(node):
         response_plot = self.run_model(str(queries) + messages.content)
         response_json = self.extract_response(response_plot=response_plot.text)
         code = response_json["code"]
+        self.log_message(f"Running code {code}")
         plot = self.run_code_plot(code)
         note = response_json["notes"]
         answer = response_json["caption"]
@@ -102,7 +103,7 @@ class PlotNode(node):
             image_base64 = base64.b64encode(buf.read()).decode('utf-8')
             buf.close()
             # response_plot.candidates[0].content.parts[0].text =  f"binary_image: {image_base64}"
-            answer_b = answer + f" <image_save>{name}</image_save>"
+            answer_b = answer + f" <image>{name}</image>"
             answer = answer_b + " using code: " + code
         history = state.get("history", [])
         return {**state,
