@@ -6,9 +6,11 @@ from app.mirkat.instructions import Instructions
 import re
 import json
 from app.mirkat.node_constructor import node
-# save logs
+from svglib.svglib import svg2rlg
 
-
+# get pwd
+import os
+pwd = os.getcwd()
 class ChatbotNode(node):
     def __init__(self, llm=None, instructions=None, functions=None, welcome=None, complete_answer=None, limit_trys=5):
         super().__init__(llm=llm, instructions=instructions, functions=functions, welcome=welcome, logging_key="Master node.- ")
@@ -58,7 +60,7 @@ class ChatbotNode(node):
         message_str = str(message_eval)
         self.log_message(f"Message for completeness check: {message_str}")
         is_compleate = self.run_model_for_compleatness(message_str)
-        self.log_message(f"Response from completeness check: {is_compleate.content}")
+        self.log_message(f"Response from completeness check: {is_compleate}")
         cleaned = self.extract_json_from_markdown(content= is_compleate.content)
         self.log_message(f"Cleaned response: {cleaned}")
         return json.loads(cleaned)
@@ -98,14 +100,21 @@ class ChatbotNode(node):
 
             answer = dict_answer.get("answer")
             returned_answer = dict_answer.get("return")
+            media = dict_answer.get("media",None)
+            if media:
+                media = media.replace("<image_save>", "")
+                media = media.replace("</image_save>", "")
+                print(pwd)
+                plot = svg2rlg(media)
+                #returned_answer = returned_answer + plot
             self.log_message(f"Returned answer: {returned_answer}")
             compleate = answer == "YES"
             if compleate:
                 #returned_answer = "***FINISH***" + returned_answer
                 finished = True
 
-            messages =  AIMessage(content=returned_answer) 
-            response = AIMessage(content=returned_answer)
+            messages =  AIMessage(content=f"****FINAL_RESPONSE**** {returned_answer}")
+            response = AIMessage(content="")
         else:
             #print(f"--- Getting response from the human ---")
             self.log_message(f"Getting question from the human")
@@ -136,10 +145,9 @@ class ChatbotNode(node):
             # Update state
         new_message = AIMessage(content="")
         if compleate or trys > self.limit_trys:
-            #response.content = "***FINISH***" + response.content
             finished = True
-            print(f"Final response is {response.content}")
-            new_message = AIMessage(content=messages.content)
+            print(f"Final response is {messages.content}")
+            new_message = messages
             
         self.log_message(f"State before updating: {state}")
         self.log_message(f"Response: {response.content}")

@@ -1,3 +1,6 @@
+import random
+import string
+
 from altair import Chart
 from langchain_core.messages import ( 
     AIMessage
@@ -86,24 +89,28 @@ class PlotNode(node):
         answer = response_json["caption"]
 
         answer_b = answer
+        name = "not_generated"
         if plot:
             buf = io.BytesIO()
             if not isinstance(plot, Chart):
                 plot.savefig(buf, format='png') # Or another format like 'jpeg'
+                name = "plot_" + ''.join(random.choices(string.ascii_letters + string.digits, k=10)) + ".svg"
+                plot.savefig(name, format = 'svg')
             elif isinstance(plot, Chart):
                 plot.save(buf, format='json')
             buf.seek(0)
             image_base64 = base64.b64encode(buf.read()).decode('utf-8')
             buf.close()
             # response_plot.candidates[0].content.parts[0].text =  f"binary_image: {image_base64}"
-            answer_b = answer + f" binary_image: {image_base64}"
-            answer = answer + " using code: " + code
+            answer_b = answer + f" <image_save>{name}</image_save>"
+            answer = answer_b + " using code: " + code
         history = state.get("history", [])
         return {**state,
                 "messages": AIMessage(content=""),
                 "answer": AIMessage(content=answer_b),
                 "request": AIMessage(content=note + answer_b),
                 "answer_source": 'PlotNode',
+                "trys": state.get("trys", 0) + 1,  # Use .get for safety
                 "history": history + [AIMessage(content=answer)], # Update history with the new message
             }
     
