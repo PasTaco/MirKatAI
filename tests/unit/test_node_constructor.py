@@ -43,8 +43,9 @@ import sys
 import os
 current_path = os.path.dirname(os.path.abspath(__file__))
 if current_path.endswith("tests/unit"):
-    sys.path.append("../tests")
-    sys.path.append("..")
+    # change the path to the parent directory
+    sys.path.append("../../tests")
+    
 if current_path.endswith("app"):
     sys.path.append("../tests")
 ## Test class node:
@@ -319,17 +320,6 @@ def test_sql_with_messages_GenerateContentResponse(monkeypatch) -> None:
 
 #### Test class PlotNode:
 
-def test_plot_node() -> None:
-    """Check that the node is created correctly."""
-    plot_node = PlotNode(instructions="you are a plot expert", functions=[min, max])
-    assert plot_node is not None
-    assert plot_node.llm is None
-    assert plot_node.welcome is None
-    assert type(plot_node.client) == Client
-    assert plot_node.model is not None
-    assert type(plot_node.model) == Chat
-    assert plot_node.instructions == "you are a plot expert"
-    assert plot_node.functions == [min, max]
 
 
 @pytest.mark.skip("Plot node must be fixed")

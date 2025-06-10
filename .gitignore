@@ -198,3 +198,4 @@ my_env.tfvars
 *.tsv
 tests/integration/tables
 app/tables
+uv.lock

@@ -6,9 +6,11 @@ from app.mirkat.instructions import Instructions
 import re
 import json
 from app.mirkat.node_constructor import node
-# save logs
+from svglib.svglib import svg2rlg
 
-
+# get pwd
+import os
+pwd = os.getcwd()
 class ChatbotNode(node):
     def __init__(self, llm=None, instructions=None, functions=None, welcome=None, complete_answer=None, limit_trys=5):
         super().__init__(llm=llm, instructions=instructions, functions=functions, welcome=welcome, logging_key="Master node.- ")
@@ -28,11 +30,24 @@ class ChatbotNode(node):
         #print(f"--- Message going to the llm_master: {messages}---")
         response = self.llm_master.invoke(str(self.instructions) + messages)
         return response
-    def run_model_for_compleatness(self, message_str):
+    def run_model_for_compleatness(self, message_str:str):
         """Run the model to check if the answer is complete."""
+        self.log_message("Waiting for model to check if answer is complete.")
         response = self.llm_master.invoke( str(self.complete_answer)+ message_str)
         return response
-    
+
+    def extract_json_from_markdown(self, content: str) -> str:
+        """
+        Extracts a JSON block from a markdown-formatted string (e.g., with ```json ... ```).
+        """
+        # Extract the first JSON block inside ```json ... ```
+        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content, re.DOTALL)
+        if not match:
+            raise ValueError("No valid JSON block found in markdown.")
+
+        json_str = match.group(1)
+        return json_str
+
     def is_compleated(self, response, original_query, message,answer_source, trys, history = []):
         """Check if the response is complete."""
         self.log_message("Checking if the response is complete")
@@ -45,8 +60,8 @@ class ChatbotNode(node):
         message_str = str(message_eval)
         self.log_message(f"Message for completeness check: {message_str}")
         is_compleate = self.run_model_for_compleatness(message_str)
-        self.log_message(f"Response from completeness check: {is_compleate.content}")
-        cleaned = re.sub(r"^```json\s*|\s*```$", "", is_compleate.content.strip())
+        self.log_message(f"Response from completeness check: {is_compleate}")
+        cleaned = self.extract_json_from_markdown(content= is_compleate.content)
         self.log_message(f"Cleaned response: {cleaned}")
         return json.loads(cleaned)
 
@@ -91,8 +106,8 @@ class ChatbotNode(node):
                 #returned_answer = "***FINISH***" + returned_answer
                 finished = True
 
-            messages =  AIMessage(content=returned_answer) 
-            response = AIMessage(content=returned_answer)
+            messages =  AIMessage(content=f"{returned_answer}")
+            response = AIMessage(content=f"{returned_answer}")
         else:
             #print(f"--- Getting response from the human ---")
             self.log_message(f"Getting question from the human")
@@ -123,10 +138,10 @@ class ChatbotNode(node):
             # Update state
         new_message = AIMessage(content="")
         if compleate or trys > self.limit_trys:
-            #response.content = "***FINISH***" + response.content
             finished = True
-            print(f"Final response is {response.content}")
-            new_message = AIMessage(content=messages.content)
+            print(f"Final response is {messages.content}")
+            new_message = AIMessage(content=f"****FINAL_RESPONSE**** {messages.content}")
+            response=AIMessage(content="")
             
         self.log_message(f"State before updating: {state}")
         self.log_message(f"Response: {response.content}")
@@ -135,7 +150,7 @@ class ChatbotNode(node):
         state = state | {
             #"messages": response.content , # Add the router's decision/response
             'messages':  new_message,
-            "request": AIMessage(content=response.content), # Add the router's decision/response
+            "request": response, # Add the router's decision/response
             "answer": answer, # Update answer with the router's response
             "finished": finished, # Use .get for safety
             "original_query": orginal_query, # Add the original query

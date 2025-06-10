@@ -32,11 +32,14 @@ from vertexai import agent_engines
 
 from frontend.utils.multimodal_utils import format_content
 import logging
+import os
+from svglib.svglib import svg2rlg
+from reportlab.graphics import renderPM
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('mirkat.log'),
+        logging.FileHandler('mirkat_handler.log'),
         logging.StreamHandler()
     ]
 )
@@ -194,6 +197,7 @@ class StreamHandler:
     def new_token(self, token: str) -> None:
         """Add a new token to the main text display."""
         self.text += token
+        logging.info(f"STREAM HANDLER New Tockem self.text = {self.text}")
         self.container.markdown(format_content(self.text), unsafe_allow_html=True)
         
 
@@ -282,7 +286,8 @@ class EventProcessor:
         # --- Handle end of stream: Now display the final collected content ---
         if self.final_content:
             logging.info(f"STREAM_HANDLER: Final content collected: {self.final_content}")
-            
+            self.final_content = self.final_content.split("****FINAL_RESPONSE**** ")[-1]
+            self.final_content = self.final_content.replace("image_save", "image")
             # ---- START: Added JSON parsing logic ----
             display_content = self.final_content # Default to the full content
             try:
@@ -315,13 +320,21 @@ class EventProcessor:
 
             # Display the potentially extracted 'return' value or the full content
             # Use the 'display_content' variable here
-            self.stream_handler.container.markdown(format_content(display_content), unsafe_allow_html=True) # MODIFIED LINE
 
+            logging.info("STREAM_HANDLER: Getting image")
+            image_path = self.get_picture()
+            if image_path:
+                display_content = display_content + image_path
+                self.final_content = self.final_content + image_path
+            self.stream_handler.container.markdown(format_content(display_content),
+                                                   unsafe_allow_html=True)  # MODIFIED LINE
+            logging.info(f"STREAM_HANDLER: Final content: {self.final_content}")
             # IMPORTANT: Store the ORIGINAL full final_content in the message history
             final_message = AIMessage(
                 content=self.final_content, # Use original self.final_content here
                 id=self.current_run_id,
-                additional_kwargs=self.additional_kwargs,
+                additional_kwargs={**self.additional_kwargs, "image_path": image_path
+                                   }
             ).model_dump()
             session = self.st.session_state["session_id"]
             # Update messages in session state *after* processing
@@ -370,6 +383,23 @@ class EventProcessor:
                     self.stream_handler.tool_expander.markdown(tool_log_str.strip())
 
             self.st.session_state.run_id = self.current_run_id # Ensure run_id is set
+
+    def get_picture(self):
+
+        if "<image>" in self.final_content and "</image>" in self.final_content:
+            start_tag = self.final_content.find("<image>") + len("<image>")
+            end_tag = self.final_content.find("</image>")
+            image_path = self.final_content[start_tag:end_tag].strip()
+            logging.info(f"STREAM_HANDLER: There is the image registered: {image_path}")
+            if os.path.exists(image_path) and image_path.endswith(".svg"):
+                logging.info(f"STREAMLIT HANDLER: Image exists")
+            else:
+                logging.warning(f"Image path does not exist: {image_path}")
+            return image_path
+
+        else:
+            logging.info(f"STREAM_HANDLER: No image found, skipping")
+        return None
 
 
 def get_chain_response(st: Any, client: Client, stream_handler: StreamHandler) -> None:

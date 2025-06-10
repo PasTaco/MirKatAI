@@ -22,7 +22,8 @@ if current_path.endswith("app"):
 #    sys.path.append("../")
 #    sys.path.append("../app")
 import logging
-
+import re
+import base64
 import pytest
 
 from app.agent_engine_app import AgentEngineApp
@@ -30,6 +31,7 @@ from app.agent_engine_app import AgentEngineApp
 from google.genai.types import Candidate, Content,Part, GenerateContentConfig, GenerateContentResponse
 #from app.mirkat.node_constructor import SQLNode, ChatbotNode
 from app.mirkat.node_sql import SQLNode
+from app.mirkat.node_plot import PlotNode
 from app.mirkat.node_chatbot import ChatbotNode
 from app.mirkat.node_literature import LiteratureNode
 from langchain_core.messages import ( # Grouped message types
@@ -41,6 +43,7 @@ from langchain_core.messages import ( # Grouped message types
 )
 from app import agent
 from unittest.mock import patch, MagicMock
+import pickle
 
 
 
@@ -167,6 +170,77 @@ def test_agent_feedback(agent_app: AgentEngineApp) -> None:
 
     logging.info("All assertions passed for agent feedback test")
 
+
+def test_master_plot_master_nodes(monkeypatch, agent_app) -> None:
+    """
+    This test check that the message from the master,
+    to the plto and returning to the master, gives the correct
+    behaivor (fininlize)
+    """
+
+    def extract_potential_base64_blocks(text: str, min_length: int = 100):
+        # Find long base64-looking strings: A-Z, a-z, 0-9, +, /, =
+        return re.findall(r"[A-Za-z0-9+/=]{%d,}" % min_length, text)
+
+    def is_base64_image_string(s: str) -> bool:
+        try:
+            decoded = base64.b64decode(s, validate=True)
+            return decoded.startswith(b'\x89PNG\r\n\x1a\n') or decoded.startswith(b'\xff\xd8')  # PNG or JPEG
+        except Exception as e:
+            return False
+
+    try:
+        response_plot = pickle.load(open("test/dummy_files/plot_result.pkl", "rb"))
+        response_complete = pickle.load(open("test/dummy_files/completes_plot_result.pkl", "rb"))
+    except FileNotFoundError as e:
+        response_plot = pickle.load(open("../dummy_files/plot_result.pkl", "rb"))
+        response_complete = pickle.load(open("../dummy_files/completes_plot_result.pkl", "rb"))
+
+    monkeypatch.setattr(PlotNode, "run_model", lambda *args, **kwargs:response_plot)
+    monkeypatch.setattr(ChatbotNode, "run_model_for_compleatness", lambda *args, **kwargs: response_complete)
+    monkeypatch.setattr(ChatbotNode, "run_model", lambda *args, **kwargs:AIMessage(content='***PLOT*** Plot A=1, B=3'))
+    input_dict = {
+        "messages": [
+            {"type": "human", "content":
+                "Barplot of values a=1 and b=3"},
+        ],
+        "table": None,
+        "answer": None,
+        "finished": False,
+        "user_id": "test-user",
+        "session_id": "test-session",
+    }
+
+    events = list(agent_app.stream_query(input=input_dict))
+
+    assert len(events) > 0, "Expected at least one chunk in response"
+
+    # Verify each event is a tuple of message and metadata and that there is binary image
+    binary_image = False
+    plot=""
+    for event in events:
+
+        assert isinstance(event, list), "Event should be a list"
+        assert len(event) == 2, "Event should contain message and metadata"
+        message, metadata = event
+        # Verify message structure
+        assert isinstance(message, dict), "Message should be a dictionary"
+        assert message["type"] == "constructor"
+        assert "kwargs" in message, "Constructor message should have kwargs"
+        kwargs = message["kwargs"]
+        print(kwargs)
+        assert "content" in kwargs, "Content should be in kwargs"
+        if binary_image:
+            plot = plot + kwargs['content']
+        if "<image>" in kwargs['content']:
+            binary_image = True
+            plot = kwargs['content']
+        if "</image>" in kwargs['content']:
+            break
+    assert binary_image, "There should be the path for the image (plot)"
+    plot = plot.split('image')[1]
+    plot_file = plot.replace(">","").replace("</","")
+    os.remove(plot_file)
 
 
 @pytest.mark.skip(reason="Plot needs to be fixed")

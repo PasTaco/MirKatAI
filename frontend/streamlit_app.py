@@ -184,7 +184,12 @@ def display_chat_message(message: dict[str, Any], index: int) -> None:
 
         # --- Display the processed content ---
         st.markdown(format_content(message_to_display), unsafe_allow_html=True) # Use message_to_display
-
+        # --- START: Display image from additional_kwargs if present ---
+        if message["type"] == "ai" and message.get("additional_kwargs") and message["additional_kwargs"].get(
+                "image_path"):
+            image_path = message["additional_kwargs"]["image_path"]
+            st.image(image_path, caption="Retrieved Image", use_column_width=True)
+        # --- END: Display image from additional_kwargs ---
         if plot:
             image_binary_bytes = base64.b64decode(image_binary)
             print(f"---- Displaying image ----")
