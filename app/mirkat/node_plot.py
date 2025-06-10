@@ -39,7 +39,6 @@ class PlotNode(node):
 
     def set_model(self):
         config_with_code = types.GenerateContentConfig(
-            #tools=[types.Tool(code_execution=types.ToolCodeExecution())],
             temperature=0.0,
             system_instruction= self.instructions,
             response_schema= self.schema,
