@@ -199,4 +199,3 @@ my_env.tfvars
 tests/integration/tables
 app/tables
 uv.lock
-uv.lock
