@@ -37,7 +37,7 @@ MIRNA_ASSISTANT_SYSTEM_MESSAGE, WELCOME_MSG = Instructions.router.get_instructio
 MIRNA_COMPLETE_ANSWER = Instructions.format_answer.get_instruction()
 SQL_INSTRUCTIONS = Instructions.sql.get_instruction()
 PLOT_INSTRUCTIONS = Instructions.plot.get_instruction()
-
+LITERATURE_INSTRUCTIONS = Instructions.literature.get_instruction()
 
 ##### Specific for SQL NODE
 
@@ -80,7 +80,7 @@ db_tools = [
 ##### Creating the nodes
 
 master_node = ChatbotNode(llm=LLM, instructions=MIRNA_ASSISTANT_SYSTEM_MESSAGE)
-literature_search_node = LiteratureNode(llm=LLM, functions=LiteratureTools)
+literature_search_node = LiteratureNode(llm=LLM, functions=LiteratureTools, instructions=LITERATURE_INSTRUCTIONS)
 plot_node = PlotNode(llm=LLM_PLOT, instructions=PLOT_INSTRUCTIONS)
 sql_node = SQLNode(llm=LLM_SQL, instructions=SQL_INSTRUCTIONS, functions=db_tools)
 all_tools = db_tools # Add literature search tools here if they were LangChain tools
