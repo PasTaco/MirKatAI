@@ -67,7 +67,7 @@ SQL_INSTRUCTIONS : |
   meaning of the columns, and execute_query to issue an SQL SELECT query. If you don't find the table or the columns at the first
   try use describe_columns again.
 
-  Avoid select all since the tables are huge. 
+  Avoid select all since the tables are huge. If the user asks for long queries, use a random sample of max 500 rows. 
 
   Examples:
 

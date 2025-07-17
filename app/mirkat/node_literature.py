@@ -34,6 +34,8 @@ class LiteratureNode(node):
     def set_config(self):
         self.config_with_search = types.GenerateContentConfig(
             tools=[types.Tool(google_search=types.GoogleSearch())],
+            temperature=0.0,
+            max_output_tokens=1250,
             )
 
     def run_model(self, user_query):
