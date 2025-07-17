@@ -44,7 +44,7 @@ class node:
     def log_message(self, message):
         """Log the message to the console."""
         logging.info(self.logging_key + message)
-        print(message)
+        
     
 
 
