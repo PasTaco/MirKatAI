@@ -47,6 +47,7 @@ import pickle
 
 
 
+current_path = os.path.dirname(os.path.abspath(__file__))
 
 @pytest.fixture
 def agent_app() -> AgentEngineApp:
@@ -188,10 +189,12 @@ def test_master_plot_master_nodes(monkeypatch, agent_app) -> None:
             return decoded.startswith(b'\x89PNG\r\n\x1a\n') or decoded.startswith(b'\xff\xd8')  # PNG or JPEG
         except Exception as e:
             return False
-
+    print(current_path)
+    dummy_path = current_path.split('MirKatAI')[0]
+    dummy_path = dummy_path + "MirKatAI/tests/dummy_files/"
     try:
-        response_plot = pickle.load(open("test/dummy_files/plot_result.pkl", "rb"))
-        response_complete = pickle.load(open("test/dummy_files/completes_plot_result.pkl", "rb"))
+        response_plot = pickle.load(open(dummy_path + "plot_result.pkl", "rb"))
+        response_complete = pickle.load(open(dummy_path + "completes_plot_result.pkl", "rb"))
     except FileNotFoundError as e:
         response_plot = pickle.load(open("../dummy_files/plot_result.pkl", "rb"))
         response_complete = pickle.load(open("../dummy_files/completes_plot_result.pkl", "rb"))
