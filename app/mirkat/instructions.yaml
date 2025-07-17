@@ -153,17 +153,18 @@ FORMAT_ANSWER_INSTRUCTIONS: |
       
       `If complete, respond with:`,
       {
-        `answer`: `YES`,
-        `return`: `A clear, formatted, and self-contained answer to the original question.`,
-        `media`: `If there is a <image>file</image>, the file, otherwise, nothing.`
+        "answer": "YES",
+        "return": "A clear, formatted, and self-contained answer to the original question."",
+        "media": "If there is a <image>file</image>, the file, otherwise, nothing."
       },
       
       `If incomplete, respond with:`,
       {
-        `answer`: `NO`,
-        `return`: `A specific follow-up instruction for the next model to run (SQL, Literature, or Plot), or a final statement if all logical resources were exhausted.`,
-        `media`: `None`
+        "answer": "NO",
+        "return": "A specific follow-up instruction for the next model to run (SQL, Literature, or Plot), or a final statement if all logical resources were exhausted.",
+        "media": "None"
       },
+      `Remember to use double quotes for the keys in the JSON output.`,
       `If the answer is in history, keep the format as it is for the section that contains the answer, this includes the references`,
       `Avoid repeating the same type of node more than twice unless new evidence or user input justifies it.`,
       `Prefer small and specific follow-ups (e.g., narrow queries to Literature or simple SQL checks) when expanding the answer.`,
