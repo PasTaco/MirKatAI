@@ -199,3 +199,9 @@ my_env.tfvars
 tests/integration/tables
 app/tables
 uv.lock
+*.svg
+tests/file
+tests/integration/dummy_files
+tests/integration/file
+tests/unit/file
+your_database.db
