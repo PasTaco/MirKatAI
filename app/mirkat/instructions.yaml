@@ -184,3 +184,9 @@ FORMAT_ANSWER_INSTRUCTIONS: |
     
   }
   """
+
+LITERATURE_INSTRUCTIONS: |
+ """
+ Search exclusively from peer review literature, scientific articles, and reviews.
+ 
+ """

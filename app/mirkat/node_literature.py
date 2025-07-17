@@ -79,7 +79,8 @@ class LiteratureNode(node):
         ## gemini-2.0-flash is faster and return less issues compared to gemini-1.5-flash
         print("\n--- Performing: GroundSearch ---")
         logging.info("Performing GroundSearch")
-        response = self.run_model(user_query.content)
+        question = self.instructions + user_query.content
+        response = self.run_model(question)
         logging.info(f"GroundSearch Response: {response}")
 
         answer,bibliography, research_queries= self.format_text(response)

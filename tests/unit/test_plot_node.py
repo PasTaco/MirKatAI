@@ -62,23 +62,31 @@ def test_plot_get_node(monkeypatch) -> None:
         "finished": False
     }
     print(current_path)
-    try:
+    #try:
+    if current_path.endswith("Mirkat"):
         plot = pickle.load(open("tests/dummy_files/plot.pkl", "rb"))
         response_plot = pickle.load(open("test/dummy_files/plot_result.pkl", "rb"))
-    except FileNotFoundError as e:
-        plot = pickle.load(open("../dummy_files/plot.pkl", "rb"))
-        response_plot = pickle.load(open("../dummy_files/plot_result.pkl", "rb"))
+    elif current_path.endswith("tests/unit"):
+        plot = pickle.load(open(current_path+"/dummy_files/plot.pkl", "rb"))
+        response_plot = pickle.load(open(current_path+"/dummy_files/plot_result.pkl", "rb"))
+    #except FileNotFoundError as e:
+    #    print(os.path.dirname(os.path.abspath(__file__)))
+    #    plot = pickle.load(open("../dummy_files/plot.pkl", "rb"))
+     #   response_plot = pickle.load(open("../dummy_files/plot_result.pkl", "rb"))
 
 
     def mock_run_model(*args, **kwargs):
         fake_response = response_plot
         return fake_response
-
+    def mock_extract_response(*args, **kwargs):
+        return json.loads(plot_response)
     monkeypatch.setattr(plot_node, "run_model",
                         mock_run_model)
     monkeypatch.setattr(plot_functions.PlotFunctons,
                         "handle_response",
                         lambda *args, **kwargs: plot)
+    monkeypatch.setattr(plot_node, "extract_response",
+                        mock_extract_response)
     result = plot_node.get_node(status)
     print(result)
     # check messages is AIMessage

@@ -28,7 +28,9 @@ master_node = nodes.master_node
 literature_search_node = nodes.literature_search_node
 plot_node = nodes.plot_node
 
-
+current_path = os.path.dirname(os.path.abspath(__file__))
+dummy_path = current_path.split('MirKatAI')[0]
+dummy_path = dummy_path + "MirKatAI/tests/dummy_files/"
 
 
 def test_plot_run_model_json():
@@ -144,14 +146,14 @@ def test_check_compleatness_model_from_plot_json():
     assert "image" in response_data["return"], "'return' explanation must mention 'binary_image'."
 
     # Save the result to a pickle file for later use
-    with open("../dummy_files/completes_plot_result.pkl", "wb") as f:
+    with open(dummy_path + "/completes_plot_result.pkl", "wb") as f:
         pickle.dump(result, f)
 
 
 @pytest.mark.skip("This test don't do anything.")
 def test_temporal():
-    result = pickle.load(open("../dummy_files/plot_result.pkl", "rb"))
-    result = pickle.load(open("../dummy_files/completes_plot_result.pkl", "rb"))
+    result = pickle.load(open(dummy_path + "/plot_result.pkl", "rb"))
+    result = pickle.load(open(dummy_path + "/completes_plot_result.pkl", "rb"))
     result_text = result.text
     print(result)
 
