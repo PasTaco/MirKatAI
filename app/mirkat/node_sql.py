@@ -20,6 +20,7 @@ class SQLNode(node):
             system_instruction=self.instructions,
             tools=self.functions,
             temperature=0.0,
+            max_output_tokens=600,
             )
 
         # Start a chat with automatic function calling enabled.

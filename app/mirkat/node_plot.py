@@ -42,7 +42,8 @@ class PlotNode(node):
             temperature=0.0,
             system_instruction= self.instructions,
             response_schema= self.schema,
-            response_mime_type="application/json"
+            response_mime_type="application/json",
+            max_output_tokens=500,
         )
         self.model = self.client.chats.create(model=self.llm, config=config_with_code)
 
