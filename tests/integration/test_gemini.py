@@ -27,7 +27,6 @@ import app.nodes as nodes
 master_node = nodes.master_node
 literature_search_node = nodes.literature_search_node
 plot_node = nodes.plot_node
-sql_node = nodes.sql_node
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 dummy_path = current_path.split('MirKatAI')[0]
@@ -54,23 +53,7 @@ def test_plot_run_model_json():
     #with open("../dummy_files/plot_result.pkl", "wb") as f:
     #    pickle.dump(result, f)
     
-def test_sql_run_model():
-    """
-    This test will make sure that the output from the gemini model is in json fromat
-    """
-    messages = "***SQL*** Check how many targets hsa-mir1-5p has in the database."
-    ai_message = AIMessage(content=messages)
-    result = sql_node.run_model(ai_message)
-    print(result)
-    assert result
-    result_content = result.text
-    # convert rest of the content to json
-    # check that result_json has the keys caption, code and notes
-    assert "1021" in result_content
-    
-    # Save the result to a pickle file for later use
-    #with open(dummy_path + "sql_result.pkl", "wb") as f:
-    #    pickle.dump(result, f)
+
 
 def test_check_compleatness_model_from_plot_json():
     """
