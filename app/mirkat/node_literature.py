@@ -67,10 +67,8 @@ class LiteratureNode(node):
         - Answer: Markdown formatted text answer from Ground Search iwth clickable references
         - Bibliography: References, link and website use to obtain the answer
         - ResearcQueries: Quesries used to perform GroundSearch"""
-        #print("\n--- ENTERING: Literature node ---")
         logging.info("Entering Literature Node")
         user_query = state['request']
-        #print(f"\n--- SEARCHING {user_query} with GroundSearch model ---")
         logging.info(f"Searching {user_query} with GroundSearch model")
 
         # --- Grounding Setup ---
@@ -79,7 +77,6 @@ class LiteratureNode(node):
 
         # --- Model Selection ---
         ## gemini-2.0-flash is faster and return less issues compared to gemini-1.5-flash
-        print("\n--- Performing: GroundSearch ---")
         logging.info("Performing GroundSearch")
         question = self.instructions + user_query.content
         response = self.run_model(question)
@@ -88,8 +85,6 @@ class LiteratureNode(node):
         answer,bibliography, research_queries= self.format_text(response)
 
         
-        #print(F"----- ANSWER: {answer} -------")
-
         history = state.get("history", [])
         message_text = answer + bibliography
         messageAI = AIMessage(content=message_text)
