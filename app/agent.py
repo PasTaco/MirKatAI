@@ -63,10 +63,8 @@ def human_node(state: GraphState) -> GraphState:
     answer = state["answer"]
     support = None
     chunks = None
-    print(F"----- ANSWER: {answer} -------")
     if isinstance(last_msg, AIMessage) or isinstance(last_msg, GenerateContentResponse):
         if answer:
-            print("Assistant:", answer)
             state["answer"] = None
 
     print("="*30)
@@ -107,9 +105,7 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
     Inspects the last message from the main chatbot (`chatbot_with_tools`)
     and decides where to route the conversation next.
     """
-    print("\n--- ROUTING: route_chatbot_decision ---")
     logging.info("Routing decision based on the last message from the chatbot.")
-    print (f"--- Current state: {state} ---")
     logging.info(f"--- Current state: {state} ---")
     messages: List[BaseMessage] = state['request']
     logging.info(f"--- Messages in state: {messages} ---")
@@ -121,7 +117,6 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
     else:
         last_message = messages
     if not isinstance(last_message, AIMessage) :
-        print(f"--- Routing Warning: Expected AIMessage, got {type(last_message)}. Routing to Human. ---")
         #return HUMAN_NODE
         content = last_message
     else:
@@ -142,7 +137,6 @@ def route_chatbot_decision(state: GraphState) -> Literal["sql_processor_node", "
     
     elif "***ANSWER_DIRECTLY***" in content:
         content = content.replace("***ANSWER_DIRECTLY***", "")
-        print(f"--- The answer directly was: {content}")
         state['messages'].content = str(content)
         #  #print (f"--- The answer directly was: {answer}")
         state['answer'] = str(content)#.response.candidates[0].content.parts[0].text
