@@ -27,7 +27,6 @@ class ChatbotNode(node):
 
     def run_model(self, messages):
         """Run the model with the given messages."""
-        #print(f"--- Message going to the llm_master: {messages}---")
         response = self.llm_master.invoke(str(self.instructions) + messages)
         return response
     def run_model_for_compleatness(self, message_str:str):
@@ -69,7 +68,6 @@ class ChatbotNode(node):
 
     def get_node(self, state):
         """The chatbot with tools. A simple wrapper around the model's own chat interface."""
-        #print("\n--- ENTERING: master_node ---")
         self.log_message("Entering Master Node")
         messages = state['messages']
         self.log_message(f"Messages received in Master Node: {messages}")
@@ -109,18 +107,14 @@ class ChatbotNode(node):
             messages =  AIMessage(content=f"{returned_answer}")
             response = AIMessage(content=f"{returned_answer}")
         else:
-            #print(f"--- Getting response from the human ---")
             self.log_message(f"Getting question from the human")
             orginal_query = state['messages'][-1]
         self.log_message(f"Compleate is {compleate}, trys is {trys}")
         if not compleate and trys < self.limit_trys:
-            print(f"--- Original query: {orginal_query} ---")
             self.log_message(f"Original query: {orginal_query}")
             # Normal operation: Invoke the master LLM for routing/response
-            print("--- Calling Master Router LLM ---")
             self.log_message("Calling Master Router LLM")
             # Always invoke with the system message + current history
-            print(f"--- Message going to the llm_master: {messages}---")
             self.log_message(f"Message going to the llm_master: {messages}")
             #messages_with_system = [{"type": "system", "content": MIRNA_ASSISTANT_SYSTEM_MESSAGE}] + state["messages"]
             response = self.run_model(str(messages))
@@ -129,17 +123,13 @@ class ChatbotNode(node):
             #    response.content = response.content.replace("***ANSWER_DIRECTLY***", "")
             #    answer = response.content
             messages = response
-            print(f"--- Master Router Raw Response: {response.content} ---")
             self.log_message(f"Master Router Raw Response: {response.content}")
-            print(f"Exiting Master Router with response: {response.content}")
             self.log_message(f"Exiting Master Router with response: {response.content}")
-            print(f"--- Master Router Response: {response.content} ---")
             self.log_message(f"Master Router Response: {response.content}")
             # Update state
         new_message = AIMessage(content="")
         if compleate or trys > self.limit_trys:
             finished = True
-            print(f"Final response is {messages.content}")
             new_message = AIMessage(content=f"****FINAL_RESPONSE**** {messages.content}")
             response=AIMessage(content="")
             
