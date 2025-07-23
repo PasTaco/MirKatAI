@@ -18,12 +18,10 @@ import pickle
 import sys
 import os
 current_path = os.path.dirname(os.path.abspath(__file__))
-if current_path.endswith("tests/unit"):
-    # change path to tests directory
-    sys.path.append("../../app")
-    sys.path.append("../../tests")
-if current_path.endswith("app"):
-    sys.path.append("../tests")
+current_path = os.path.dirname(os.path.abspath(__file__))
+dummy_path = current_path.split('MirKatAI')[0]
+dummy_path = dummy_path + "MirKatAI/tests/dummy_files/"
+
 
 def test_plot_node_initialization() -> None:
     """Check that the node is created correctly."""
@@ -62,18 +60,8 @@ def test_plot_get_node(monkeypatch) -> None:
         "finished": False
     }
     print(current_path)
-    #try:
-    if current_path.endswith("Mirkat"):
-        plot = pickle.load(open("tests/dummy_files/plot.pkl", "rb"))
-        response_plot = pickle.load(open("test/dummy_files/plot_result.pkl", "rb"))
-    elif current_path.endswith("tests/unit"):
-        plot = pickle.load(open(current_path+"/dummy_files/plot.pkl", "rb"))
-        response_plot = pickle.load(open(current_path+"/dummy_files/plot_result.pkl", "rb"))
-    #except FileNotFoundError as e:
-    #    print(os.path.dirname(os.path.abspath(__file__)))
-    #    plot = pickle.load(open("../dummy_files/plot.pkl", "rb"))
-     #   response_plot = pickle.load(open("../dummy_files/plot_result.pkl", "rb"))
-
+    plot = pickle.load(open(dummy_path+"plot.pkl", "rb"))
+    response_plot = pickle.load(open(dummy_path+"plot_result.pkl", "rb"))
 
     def mock_run_model(*args, **kwargs):
         fake_response = response_plot

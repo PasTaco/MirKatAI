@@ -15,12 +15,8 @@ import pickle
 import sys
 import os
 current_path = os.path.dirname(os.path.abspath(__file__))
-if current_path.endswith("tests/unit"):
-    # change path to tests directory
-    sys.path.append("../../app")
-    sys.path.append("../../tests")
-if current_path.endswith("app"):
-    sys.path.append("../tests")
+dummy_path = current_path.split('MirKatAI')[0]
+dummy_path = dummy_path + "MirKatAI/tests/dummy_files/"
 
 
 def test_plot_get_node_complete(monkeypatch) -> None:
@@ -48,10 +44,8 @@ def test_plot_get_node_complete(monkeypatch) -> None:
                            ]
                }
     print(current_path)
-    try:
-        complete = pickle.load(open("tests/dummy_files/completes_plot_result.pkl", "rb"))
-    except FileNotFoundError as e:
-        complete = pickle.load(open("../dummy_files/completes_plot_result.pkl", "rb"))
+    complete = pickle.load(open(dummy_path+"completes_plot_result.pkl", "rb"))
+
 
     monkeypatch.setattr(chatbot_node, "run_model_for_compleatness",
                         lambda *args, **kwargs: complete)

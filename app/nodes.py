@@ -17,7 +17,8 @@ from langgraph.prebuilt import ToolNode
 
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-
+mirkat_path = current_path.split('MirKatAI')[0]
+mirkat_path = mirkat_path + "MirKatAI/"
 
 
 # Load .env file
@@ -45,15 +46,10 @@ LITERATURE_INSTRUCTIONS = Instructions.literature.get_instruction()
 pwd = os.getcwd()
 # import tables with description of MiRKat DB
 # the if else is so it can work on the pyCharm tests
-if "tests" in pwd:
-    mirkat_columns_desctiption = pd.read_csv('../../tables/mirkat_tables_columns_descriptions.csv')
-    mirkat_tables_desctiption = pd.read_csv('../../tables/mirkat_tables_descriptions.csv')
-elif pwd.endswith("app"):
-    mirkat_columns_desctiption = pd.read_csv('../tables/mirkat_tables_columns_descriptions.csv')
-    mirkat_tables_desctiption = pd.read_csv('../tables/mirkat_tables_descriptions.csv')
-else:
-    mirkat_columns_desctiption = pd.read_csv('tables/mirkat_tables_columns_descriptions.csv')
-    mirkat_tables_desctiption = pd.read_csv('tables/mirkat_tables_descriptions.csv')
+
+mirkat_columns_desctiption = pd.read_csv(mirkat_path+'tables/mirkat_tables_columns_descriptions.csv')
+mirkat_tables_desctiption = pd.read_csv(mirkat_path+'tables/mirkat_tables_descriptions.csv')
+
 
 #### SQL connection
 

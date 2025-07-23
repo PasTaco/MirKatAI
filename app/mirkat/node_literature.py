@@ -41,12 +41,25 @@ class LiteratureNode(node):
     def run_model(self, user_query):
         """Run the model with the given messages."""
         logging.info(f"Running model with user query: {user_query}")
-        response = self.client.models.generate_content(
-            model=self.llm,
-            contents=user_query,
-            config=self.config_with_search,
-            #system_instruction=LITERATURE_SYSTEM_INSTRUCTION_CONTENT, # Apply system instruction
-        )
+        inner_tries = 1
+        while inner_tries <= 2:
+            try:
+                response = self.client.models.generate_content(
+                    model=self.llm,
+                    contents=user_query,
+                    config=self.config_with_search,
+                    #system_instruction=LITERATURE_SYSTEM_INSTRUCTION_CONTENT, # Apply system instruction
+                )
+                inner_tries = 2
+            except Exception as e:
+                if inner_tries < 2:
+                    self.log_message(f"Error sending message to Literature model: {e}. Rennuning for {inner_tries} time")
+                else:
+                    self.log_message(f"Error sending message to Literature model: {e}. No more retries.")
+                    raise e
+            finally:
+                inner_tries = inner_tries + 1
+                    
         return response
     
     def format_text(self, response):

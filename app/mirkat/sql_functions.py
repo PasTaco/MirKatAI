@@ -119,5 +119,8 @@ class DBTools:
         with open(f"{query_name}.tsv", "w", newline="") as f:
             writer = csv.writer(f, delimiter="\t")
             writer.writerows(results) 
-        
+        # if results is too large, get the first 100 rows
+        if len(results) > 100:
+            results = results[:100]
+        cursor.close()
         return results

@@ -18,8 +18,15 @@ from google.genai.types import GenerateContentResponse
 from google.genai.types import Candidate, Content,Part, GenerateContentConfig
 from app.mirkat.node_sql import SQLNode
 import os
-
+from app.agent_engine_app import AgentEngineApp
+import pytest
 current_path = os.path.dirname(os.path.abspath(__file__))
+@pytest.fixture
+def agent_app() -> AgentEngineApp:
+    """Fixture to create and set up AgentEngineApp instance"""
+    app = AgentEngineApp(project_id='mirkatdb')
+    app.set_up()
+    return app
 
 def test_agent_stream() -> None:
     """
@@ -53,7 +60,7 @@ def test_agent_stream() -> None:
             break
     assert has_content, "Expected at least one message with content"
 
-from app.agent_engine_app import AgentEngineApp
+
 def test_agent_sql(agent_app: AgentEngineApp, monkeypatch) -> None:
     """
     Integration test for the agent stream query functionality.

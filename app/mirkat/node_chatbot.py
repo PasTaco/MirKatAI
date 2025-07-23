@@ -21,7 +21,6 @@ class ChatbotNode(node):
             self.complete_answer = Instructions.format_answer.get_instruction()
         self.limit_trys = limit_trys
         
-
     def set_model(self, model):
         self.llm_master = ChatGoogleGenerativeAI(model=model)
 

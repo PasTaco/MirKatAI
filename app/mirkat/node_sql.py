@@ -33,12 +33,23 @@ class SQLNode(node):
 
     def run_model(self, messages):
         """Run the model with the given messages."""
-        print(f"--- Message entering run model: {messages}---")
         self.log_message(f"Message entering run model: {messages}")
         text = messages.content
-        print (f"--- Message going to the sql model: {text}---")
         self.log_message(f"Message going to the sql model: {text}")
-        response = self. chat.send_message(text)
+        inner_tries = 1
+        while inner_tries <= 2:
+            try:
+                response = self.chat.send_message(text)
+                inner_tries = 2
+            except Exception as e:
+                if inner_tries < 2:
+                    self.log_message(f"Error sending message to SQL model: {e}. Rennuning for {inner_tries} time")
+                else:
+                    self.log_message(f"Error sending message to SQL model: {e}. No more retries.")
+                    raise e
+            finally:
+                inner_tries = inner_tries + 1
+                
         return response
 
     def get_queries(self, callings):
@@ -49,9 +60,7 @@ class SQLNode(node):
     def get_node(self,state):
         """The sql llm that will check for the sql questions and get a json file in response."""
 
-        print("--- Calling SQL Processor Node ---")
         self.log_message("Calling SQL Processor Node")
-        print("State: ", state)
         self.log_message(f"State: {state}")
         history = state.get('history', [])
         # If history is empty, use the last message
@@ -61,32 +70,23 @@ class SQLNode(node):
             self.log_message("SQL processor called with no messages.")
             return state
 
-        print("The type of the message is: ", type(messages))
         self.log_message(f"The type of the message is: {type(messages)}")
         # check if it is GenerateContentResponse
         if isinstance(messages, GenerateContentResponse):
-            print("The message is GenerateContentResponse, changing to AIMessage")
             self.log_message("The message is GenerateContentResponse, changing to AIMessage")
             messages = AIMessage(content=messages.candidates[0].content)
         elif isinstance(messages, str):
-            print("The message is str, changing to AIMessage")
             self.log_message("The message is str, changing to AIMessage")
             messages = AIMessage(content=messages)
         elif isinstance(messages, AIMessage):
             pass
         else:
-            print("The message is not str or AIMessage, changing to AIMessage")
             self.log_message("The message is not str or AIMessage, changing to AIMessage")
-            print("The type of the message is: ", type(messages))
             self.log_message(f"The type of the message is: {type(messages)}")
 
-        #print("The message sent to the SQL node is: ", messages)
-        print("The message sent to the SQL node is: ", messages)
         self.log_message(f"The message sent to the SQL node is: {messages}")
         response = self.run_model(messages)
-        print(f"--- SQL Processor LLM Response: {response} ---")
         self.log_message(f"SQL Processor LLM Response: {response}")
-        print("Run get_queries")
         self.log_message("Run get_queries")
         callings = response.automatic_function_calling_history
         queries = self.get_queries(callings)

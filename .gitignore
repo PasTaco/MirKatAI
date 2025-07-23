@@ -205,3 +205,5 @@ tests/integration/dummy_files
 tests/integration/file
 tests/unit/file
 your_database.db
+log.txt
+logs_3.txt
