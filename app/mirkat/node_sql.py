@@ -36,13 +36,20 @@ class SQLNode(node):
         self.log_message(f"Message entering run model: {messages}")
         text = messages.content
         self.log_message(f"Message going to the sql model: {text}")
-        new_try = True
-        while new_try:
+        inner_tries = 1
+        while inner_tries <= 2:
             try:
                 response = self.chat.send_message(text)
+                inner_tries = 2
             except Exception as e:
-                new_try = False
-                self.log_message(f"Error sending message to SQL model: {e}. Rennuning")
+                if inner_tries < 2:
+                    self.log_message(f"Error sending message to SQL model: {e}. Rennuning for {inner_tries} time")
+                else:
+                    self.log_message(f"Error sending message to SQL model: {e}. No more retries.")
+                    raise e
+            finally:
+                inner_tries = inner_tries + 1
+                
         return response
 
     def get_queries(self, callings):

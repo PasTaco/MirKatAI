@@ -51,8 +51,8 @@ def test_plot_run_model_json():
     assert "notes" in result_json
     assert "figure" in result_json['code'], "The final figure must be saved on variable figure"
     # Save the result to a pickle file for later use
-    #with open("../dummy_files/plot_result.pkl", "wb") as f:
-    #    pickle.dump(result, f)
+    with open(dummy_path+"plot_result.pkl", "wb") as f:
+        pickle.dump(result, f)
     
 def test_sql_run_model():
     """
@@ -64,6 +64,8 @@ def test_sql_run_model():
     print(result)
     assert result
     result_content = result.text
+    if "error" in result_content and "database" in result_content:
+        raise "Connection to the database error."
     # convert rest of the content to json
     # check that result_json has the keys caption, code and notes
     assert "1021" in result_content
