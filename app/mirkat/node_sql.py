@@ -38,7 +38,7 @@ class SQLNode(node):
         text = messages.content
         print (f"--- Message going to the sql model: {text}---")
         self.log_message(f"Message going to the sql model: {text}")
-        response = self. chat.send_message(text)
+        response = self.chat.send_message(text)
         return response
 
     def get_queries(self, callings):
