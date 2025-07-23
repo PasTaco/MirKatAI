@@ -51,7 +51,13 @@ class PlotNode(node):
         """Run the model with the given messages."""
         #print(f"--- Message going to the llm_master: {messages}---")
         self.log_message(f"Message going to the node: {messages}")
-        response_plot = self.model.send_message(messages)
+        new_try = True
+        while new_try:
+            try:
+                response_plot = self.model.send_message(messages)
+            except Exception as e:
+                new_try = False
+                self.log_message(f"Error sending message to Plot model: {e}. Rennuning")        
         return response_plot
     
     def handle_response(self, response_plot):

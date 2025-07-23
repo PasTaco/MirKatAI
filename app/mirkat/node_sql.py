@@ -38,7 +38,13 @@ class SQLNode(node):
         text = messages.content
         print (f"--- Message going to the sql model: {text}---")
         self.log_message(f"Message going to the sql model: {text}")
-        response = self.chat.send_message(text)
+        new_try = True
+        while new_try:
+            try:
+                response = self.chat.send_message(text)
+            except Exception as e:
+                new_try = False
+                self.log_message(f"Error sending message to SQL model: {e}. Rennuning")
         return response
 
     def get_queries(self, callings):
