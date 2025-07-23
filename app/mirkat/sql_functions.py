@@ -88,7 +88,7 @@ class DBTools:
             return []
 
         # Filter the DataFrame for the specified table name
-        filtered_df = self.mirkat_columns_desctiption[mirkat_columns_desctiption['Table'] == table_name]
+        filtered_df = self.mirkat_columns_desctiption[self.mirkat_columns_desctiption['Table'] == table_name]
 
         # Extract column names and descriptions
         columns = list(zip(filtered_df['Column Name'], filtered_df['Description']))
