@@ -270,13 +270,13 @@ class EventProcessor:
 
                     # Handle AI responses - Accumulate content but DON'T display yet
                     elif content := message.get("content"):
-                        logging.info(f"Received list of content parts: {content}")
+                        #logging.info(f"Received list of content parts: {content}")
                         if '"answer": "YES"' in content:
                             ignore_messages = not ignore_messages
-                            logging.info("STREAM_HANDLER: Stop ignoring messages.")
+                            #logging.info("STREAM_HANDLER: Stop ignoring messages.")
                         if not ignore_messages or True:
                             if isinstance(content, list):
-                                print(f"STREAM_HANDLER: Received list of content parts: {content}")
+                                #print(f"STREAM_HANDLER: Received list of content parts: {content}")
                                 self.final_content += "".join(str(part) for part in content)
                             else:
                                 self.final_content += content
