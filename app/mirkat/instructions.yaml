@@ -52,8 +52,21 @@ ROUTING_INSTRUCTIONS : |
   """
 
 WELCOME_MSG : |
-  Hello there. Please ask me your microRNA related questions. I have access to miRKat database and general web search.
+ Welcome to the **miRKatAI** — an interactive assistant designed to help you explore the world of microRNAs.
 
+ **How to get started:**
+
+ - **Ask for specific data** about a microRNA, such as its validated targets, tissue expression, or seed sequence.
+ - **Request literature summaries** on the function of a microRNA, its role in a disease, or other complex topics.
+ - **Generate visualizations** to see expression data or other results in a clear, graphical format.
+
+ **This chatbot uses three specialized tools to answer your questions:**
+
+ - A **miRKat SQL Node** to perform precise searches on the miRKat database for structured information like tissue specificity, gene targets, and seed regions.
+ - A **Literature Research Node** to scan scientific articles and synthesize information, providing broader context and up-to-date insights.
+ - A **Plotting Node** to dynamically create charts and figures that visualize data and make results easier to understand.
+
+ Each user session is independent. Your queries and results are processed only for your current session.
 
 SQL_INSTRUCTIONS : |
   """

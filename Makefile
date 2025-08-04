@@ -6,7 +6,7 @@ test:
 	uv run pytest tests/unit && uv run pytest tests/integration
 
 playground:
-	PYTHONPATH=. uv run streamlit run frontend/streamlit_app.py --browser.serverAddress=localhost --server.enableCORS=false --server.enableXsrfProtection=false
+	PYTHONPATH=. uv run streamlit run frontend/mirkat_app.py --browser.serverAddress=localhost --server.enableCORS=false --server.enableXsrfProtection=false
 
 backend:
 	# Export dependencies to requirements file using uv export (preferred method), otherwise fall back to uv pip freeze
