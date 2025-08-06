@@ -52,7 +52,7 @@ ROUTING_INSTRUCTIONS : |
   """
 
 WELCOME_MSG : |
- Welcome to the **miRKatAI** — an interactive assistant designed to help you explore the world of microRNAs.
+ Welcome to the **miRKatAI** - an interactive assistant designed to help you explore the world of microRNAs.
 
  **How to get started:**
 
