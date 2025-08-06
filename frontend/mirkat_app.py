@@ -32,12 +32,9 @@ def setup_page() -> None:
         menu_items=None,
     )
 
-
     # Only assign a UUID if one doesn't already exist in this session
     if "user_id" not in st.session_state:
         st.session_state.user_id = str(uuid.uuid4())
-
-
 
     # Load SVG logo
     logo = Image.open("frontend/assets/MiRkatAI.png")
@@ -55,9 +52,6 @@ def setup_page() -> None:
 
     # Once user_id is set
     st.markdown(WELCOME_MSG.content)
-
-
-
 
     with st.sidebar:
         st.markdown("""## Coming soon...""")
