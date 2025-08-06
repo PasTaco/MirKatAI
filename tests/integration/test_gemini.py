@@ -58,7 +58,7 @@ def test_sql_run_model():
     """
     This test will make sure that the output from the gemini model is in json fromat
     """
-    messages = "***SQL*** Check how many targets hsa-mir1-5p has in the database."
+    messages = "***SQL*** Check how many targets hsa-mir1-5p has in the database. Provide only the number"
     ai_message = AIMessage(content=messages)
     result = sql_node.run_model(ai_message)
     print(result)

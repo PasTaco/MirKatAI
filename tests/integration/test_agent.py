@@ -105,8 +105,8 @@ def test_agent_sql(agent_app: AgentEngineApp, monkeypatch) -> None:
         assert isinstance(message, dict), "Message should be a dictionary"
         assert message["type"] == "constructor"
         assert "kwargs" in message, "Constructor message should have kwargs"
-        assert "content" in kwargs, "Content should be in kwargs"
         kwargs = message["kwargs"]
+        assert "content" in kwargs, "Content should be in kwargs"
         if "Mir1" in kwargs['content']:
             sql_exists = True
         print(kwargs)

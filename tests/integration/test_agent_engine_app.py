@@ -175,8 +175,8 @@ def test_agent_feedback(agent_app: AgentEngineApp) -> None:
 def test_master_plot_master_nodes(monkeypatch, agent_app) -> None:
     """
     This test check that the message from the master,
-    to the plto and returning to the master, gives the correct
-    behaivor (fininlize)
+    to the plot and returning to the master, gives the correct
+    behavior (finalize)
     """
 
     def extract_potential_base64_blocks(text: str, min_length: int = 100):

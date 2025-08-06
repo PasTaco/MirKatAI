@@ -52,6 +52,8 @@ class ChatbotNode(node):
         # Check if the response contains a SQL query
         if isinstance(original_query, str):
             original_query = original_query
+        elif isinstance(original_query, dict):
+            original_query = original_query.get("content", "")
         else:
             original_query = original_query.content
         message_eval = {'answer': response, 'original_query': original_query, "message": message.content, "answer_source": answer_source, "trys": trys, "try_limit": self.limit_trys, "history": history}
