@@ -33,13 +33,13 @@ LLM_SQL = "gemini-2.0-flash-lite"
 LLM_PLOT = "gemini-2.5-flash-lite"
 ###### define instructions for nodes
 
+GENERAL_INSTRUCTIONS = Instructions.general.get_instruction()
 
 MIRNA_ASSISTANT_SYSTEM_MESSAGE, WELCOME_MSG = Instructions.router.get_instruction()
-MIRNA_COMPLETE_ANSWER = Instructions.format_answer.get_instruction()
-SQL_INSTRUCTIONS = Instructions.sql.get_instruction()
-PLOT_INSTRUCTIONS = Instructions.plot.get_instruction()
-LITERATURE_INSTRUCTIONS = Instructions.literature.get_instruction()
-
+MIRNA_COMPLETE_ANSWER = GENERAL_INSTRUCTIONS + Instructions.format_answer.get_instruction()
+SQL_INSTRUCTIONS = GENERAL_INSTRUCTIONS + Instructions.sql.get_instruction()
+PLOT_INSTRUCTIONS = GENERAL_INSTRUCTIONS + Instructions.plot.get_instruction()
+LITERATURE_INSTRUCTIONS = GENERAL_INSTRUCTIONS + Instructions.literature.get_instruction()
 ##### Specific for SQL NODE
 
 ### SQL tables descriptions
