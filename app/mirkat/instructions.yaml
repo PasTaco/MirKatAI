@@ -177,7 +177,11 @@ FORMAT_ANSWER_INSTRUCTIONS: |
         "return": "A specific follow-up instruction for the next model to run (SQL, Literature, or Plot), or a final statement if all logical resources were exhausted.",
         "media": "None"
       },
-       Answer: 
+       Answer:
+      `NO -> It is not completed if:` [`The information on history does not to answer the core of the question`,
+           `The question specifies a plot and no image is given`,
+           `The question specifies the database and the SQL node was not used`,
+           `The question specifies literature review and the Literature node had not been used`]
       `YES -> It is completed if:` [`max trys are reached`, 
            `The core intent of the user's original query has been addressed.`,
            `The information is good enough`,
@@ -187,10 +191,7 @@ FORMAT_ANSWER_INSTRUCTIONS: |
            `The question already used all the available resources`,
            `There is more information needed to accurate answer the question or the question itself is incomplete`
            `The is a need to communicate with the user that asked the question`]
-      `NO -> It is not completed if:` [`The information on history does not to answer the core of the question`,
-           `The question specifies a plot and no image is given`,
-           `The question specifies the database and the SQL node was not used`,
-           `The question specifies literature review and the Literature node had not been used`]
+
  
       Return:
       `If the answer is NO`: [ `Ask for a follow up question to the model.`, 
