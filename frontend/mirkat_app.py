@@ -97,11 +97,15 @@ def main():
         workflow = agent
         result = workflow.invoke(state)
         assistant_response = result.get("messages", "").content
+        assistant_bibliography = result.get("bibliography", "").content
         # strip ****FINAL RESPONSE**** prefix if present
         if assistant_response.startswith("****FINAL_RESPONSE****"):
             assistant_response = assistant_response.replace("****FINAL_RESPONSE****", "").strip()
         st.session_state.messages.append({"role": "assistant", "content": assistant_response})
         st.chat_message("assistant").markdown(assistant_response, unsafe_allow_html=True)
+        if assistant_bibliography != "":
+            st.session_state.messages.append({"role": "assistant", "content": assistant_bibliography})
+            st.chat_message("assistant").markdown(assistant_bibliography, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":

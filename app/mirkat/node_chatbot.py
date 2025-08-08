@@ -38,7 +38,7 @@ class ChatbotNode(node):
     def set_model(self, model):
         self.llm_master = ChatGoogleGenerativeAI(model=model)
         config_with_code = types.GenerateContentConfig(
-            temperature=0.7,
+            temperature=0.2,
             system_instruction=self.complete_answer,
             response_schema=self.schema_complete,
             response_mime_type="application/json"
@@ -179,6 +179,7 @@ class ChatbotNode(node):
             "request": response, # Add the router's decision/response
             "answer": answer, # Update answer with the router's response
             "finished": finished, # Use .get for safety
+            "bibliography": state.get("bibliography", AIMessage(content="")),
             "original_query": orginal_query, # Add the original query
             "trys": trys + 1, # Increment the number of tries
             "answer_source": 'ChatbotNode', # Add the source of the answer
