@@ -113,8 +113,7 @@ def test_sql_run_model_kasia_2():
     # check that result_json has the keys caption, code and notes
     assert "muscle" in result_content
 
-# TODO: FIx plot node json output.
-@pytest.mark.skip("Plot node needs to be attended")
+
 def test_check_compleatness_model_from_plot_json():
     """
     This test will make sure that the output from the gemini model after getting and
@@ -159,18 +158,9 @@ def test_check_compleatness_model_from_plot_json():
                'answer_source': 'PlotNode',
                'trys': 1,
                'try_limit': 5,
-               'history': [HumanMessage(content='Barplot of values a=1 and b=3',
-                                        additional_kwargs={},
-                                        response_metadata={},
-                                        id='344c2e75-a150-4a19-9a11-bfd2f8863691'),
-                           AIMessage(content='***PLOT*** Plot A=1, B=3',
-                                     additional_kwargs={},
-                                     response_metadata={},
-                                     id='84e6698f-9e1b-43cf-a323-c70a066420d6'),
-                           AIMessage(content='Barplot of values a=1 and b=3 <image_save>file</image_save> using code: Placeholder ',
-                                     additional_kwargs={},
-                                     response_metadata={},
-                                     id='cad2e8d8-c9b4-45c9-9e1f-e194a2ffe791')
+               'history': ['Barplot of values a=1 and b=3',
+                           '***PLOT*** Plot A=1, B=3',
+                            'Barplot of values a=1 and b=3 <image_save>file</image_save> using code: Placeholder ',
                            ]
                }
     message_str = str(message)
