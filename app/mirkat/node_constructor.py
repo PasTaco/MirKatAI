@@ -15,16 +15,24 @@ from app.mirkat.global_variables import SQL_QUERIES
 from app.mirkat.instructions import Instructions
 import re
 import json
+import sys
 # save logs
 import logging
+# Make sure stdout/stderr use UTF-8
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
+
+# Logging configuration
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler('mirkat.log'),
         logging.StreamHandler()
-    ]
+    ],
+    encoding='utf-8'  # Ensure log messages are UTF-8 encoded
 )
+
 load_dotenv()
 
 # Get the API key
