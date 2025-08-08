@@ -63,23 +63,29 @@ class node:
             json_str = match.group(1)
         else:
             # Fallback: extract raw JSON object
-            match = re.search(r'\{(?:[^{}]|(?R))*\}', content, re.DOTALL)  # recursive pattern if supported
+            match = re.search(r'\{.*?\}', content, re.DOTALL) # recursive pattern if supported
             if not match:
                 # simple fallback without recursion (non-greedy)
                 match = re.search(r'\{.*?\}', content, re.DOTALL)
             if match:
                 json_str = match.group(0)
             else:
-                raise ValueError("No valid JSON block found in markdown.")
+                raise ValueError(f"No valid JSON block found in markdown. Input string: {content}")
 
         # Escape literal newlines inside JSON string values
         json_str = self.escape_newlines_in_json_string(json_str)
+        # check for missing " and }
+        if json_str.count('"') % 2 != 0:
+            json_str += '"'
+        if json_str.count('{') > json_str.count('}'):
+            json_str += '}'
+
 
         # Optionally try loading to check valid JSON
         try:
             _ = json.loads(json_str)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Extracted JSON is invalid: {e}")
+            raise ValueError(f"Extracted JSON is invalid: {e}, string: {json_str}")
 
         return json_str
         

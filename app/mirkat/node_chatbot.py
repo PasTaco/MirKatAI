@@ -34,18 +34,6 @@ class ChatbotNode(node):
         response = self.llm_master.invoke( str(self.complete_answer)+ message_str)
         return response
 
-    def extract_json_from_markdown(self, content: str) -> str:
-        """
-        Extracts a JSON block from a markdown-formatted string (e.g., with ```json ... ```).
-        """
-        # Extract the first JSON block inside ```json ... ```
-        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content, re.DOTALL)
-        if not match:
-            raise ValueError("No valid JSON block found in markdown.")
-
-        json_str = match.group(1)
-        return json_str
-
     def is_compleated(self, response, original_query, message,answer_source, trys, history = []):
         """Check if the response is complete."""
         self.log_message("Checking if the response is complete")
