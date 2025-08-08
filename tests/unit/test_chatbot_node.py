@@ -104,3 +104,10 @@ def test_extract_json_from_json_tag(monkeypatch):
     res = json.loads(r)
     assert res
     assert res['caption']=="Barplot of values a=1 and b=3"
+
+def test_is_complete():
+    node = nodes.master_node
+    response = node.is_complete(original_query="What is the seed of miR1?", history=["UGGA is the seed of hsa-miR-1"],
+                     trys=2, answer_source='SQL_NODE')
+    print(response)
+    assert response
