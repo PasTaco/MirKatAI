@@ -2,6 +2,12 @@
 import os
 import logging
 from typing import Any, Dict, List, Literal, Optional, TypedDict
+import sys
+
+
+# Make sure stdout/stderr use UTF-8
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
 
 # Logging configuration
 logging.basicConfig(
@@ -10,7 +16,8 @@ logging.basicConfig(
     handlers=[
         logging.FileHandler('mirkat.log'),
         logging.StreamHandler()
-    ]
+    ],
+    encoding='utf-8'  # Ensure log messages are UTF-8 encoded
 )
 
 # Environment variables
