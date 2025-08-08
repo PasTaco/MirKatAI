@@ -93,3 +93,19 @@ def test_cleansed_to_json():
       "return": "The number of target genes is needed for hsa-mir-1-5p, hsa-mir-24-3p, and the genes targeted by both. Use SQL_NODE to query the number of target genes for each microRNA and the intersection between them."
     }'''
     json.loads(clean)
+
+def test_extract_response():
+    response = """```json
+{
+ "caption": "Barplot of values a=1 and b=3",
+ "code": "import matplotlib.pyplot as plt\n\nvalues = [1, 3]\nlabels = ['a', 'b']\n\nfig, ax = plt.subplots()\nax.bar(labels, values)\nax.set_xlabel('Variables')\nax.set_ylabel('Values')\nax.set_title('Barplot of a and b')\n\nfigure = fig",
+ "notes": "The code generates a barplot with 'a' and 'b' on the x-axis and their corresponding values (1 and 3) on the y-axis."
+}
+```"""
+    plot_node = nodes.plot_node
+    response = plot_node.extract_response(response_plot=response)
+    print (response)
+    assert response['caption'] == "Barplot of values a=1 and b=3"
+    assert len(response.keys()) == 3
+
+

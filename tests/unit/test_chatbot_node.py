@@ -1,7 +1,7 @@
 import pytest
 from app.mirkat.node_chatbot import ChatbotNode
 import app.nodes as nodes
-
+import json
 from langchain_core.messages import (  # Grouped message types
     AIMessage, HumanMessage
 )
@@ -56,3 +56,51 @@ def test_plot_get_node_complete(monkeypatch) -> None:
     result_message = result['messages'].content
     assert "image" in result_message
 
+
+def test_extract_json_from_markdown(monkeypatch):
+    """
+    Test to check that the extract_json can deal with the jsons
+    """
+    chatbot_node = nodes.master_node
+    is_complete_content = '{"answer": "YES", "return": "The tissues in which miR-1, miR-199a-5p, and miR-181a-5p are expressed are muscle, brain, and lung.", "media": null}'
+    r = chatbot_node.extract_json_from_markdown(content=is_complete_content)
+    print(r)
+    assert r
+    assert r == is_complete_content
+    res = json.loads(r)
+    assert res
+
+def test_extract_json_from_json_tag(monkeypatch):
+    """This test will evaluate for the old way of tag jsons"""
+    content = """```json
+            {
+              "answer": "YES",
+              "return": "The code generates a Venn diagram showing the overlap between two microRNAs and their target genes. The sizes of the sets and their overlap are specified, and the diagram is labeled accordingly.Venn diagram showing the overlap between the target genes of hsa-mir-1-5p and hsa-mir-24-3p. <image_save>plot_CZaNNzdDr4.svg</image_save>",
+              "media": "plot_CZaNNzdDr4.svg"
+            }
+            ```"""
+    is_complete_content = '{"answer": "YES", "return": "The code generates a Venn diagram showing the overlap between two microRNAs and their target genes. The sizes of the sets and their overlap are specified, and the diagram is labeled accordingly.Venn diagram showing the overlap between the target genes of hsa-mir-1-5p and hsa-mir-24-3p. <image_save>plot_CZaNNzdDr4.svg</image_save>","media": "plot_CZaNNzdDr4.svg"}'
+    chatbot_node = nodes.master_node
+    r = chatbot_node.extract_json_from_markdown(content=content)
+    print(r)
+    assert r
+    res = json.loads(r)
+    assert res
+    assert res['answer']=='YES'
+
+def test_extract_json_from_json_tag(monkeypatch):
+    """This test will evaluate for the old way of tag jsons"""
+    content = """```json
+{
+ "caption": "Barplot of values a=1 and b=3",
+ "code": "import matplotlib.pyplot as plt\n\nvalues = [1, 3]\nlabels = ['a', 'b']\n\nfig, ax = plt.subplots()\nax.bar(labels, values)\nax.set_xlabel('Variables')\nax.set_ylabel('Values')\nax.set_title('Barplot of a and b')\n\nfigure = fig",
+ "notes": "The code generates a barplot with 'a' and 'b' on the x-axis and their corresponding values (1 and 3) on the y-axis."
+}
+```"""
+    chatbot_node = nodes.master_node
+    r = chatbot_node.extract_json_from_markdown(content=content)
+    print(r)
+    assert r
+    res = json.loads(r)
+    assert res
+    assert res['caption']=="Barplot of values a=1 and b=3"

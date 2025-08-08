@@ -39,12 +39,19 @@ def test_plot_run_model_json():
     This test will make sure that the output from the gemini model is in json fromat
     """
     messages = "***PLOT*** Plot a barplot of values a=1 and b=3."
+    failed = []
+
     result = plot_node.run_model(messages)
     print(result)
     assert result
     result_content = result.text
     # convert rest of the content to json
-    result_json = json.loads(result_content)
+
+    try:
+        result_json = json.loads(result_content)
+    except Exception as e:
+        result_json = plot_node.extract_json_from_markdown(content=result_content)
+        result_json = json.loads(result_json)
     # check that result_json has the keys caption, code and notes
     assert "caption" in result_json
     assert "code" in result_json
@@ -73,6 +80,38 @@ def test_sql_run_model():
     # Save the result to a pickle file for later use
     #with open(dummy_path + "sql_result.pkl", "wb") as f:
     #    pickle.dump(result, f)
+
+def test_sql_run_model_kasia():
+    """
+    This test will make sure that the output from the gemini model is in json fromat
+    """
+    messages = "***SQL*** Which tissues are miR-1, miR-199a-5p, miR-181a-5p expressed in? "
+    ai_message = AIMessage(content=messages)
+    result = sql_node.run_model(ai_message)
+    print(result)
+    assert result
+    result_content = result.text
+    if "error" in result_content and "database" in result_content:
+        raise "Connection to the database error."
+    # convert rest of the content to json
+    # check that result_json has the keys caption, code and notes
+    assert "muscle" in result_content
+
+def test_sql_run_model_kasia_2():
+    """
+    This test will make sure that the output from the gemini model is in json fromat
+    """
+    messages = "***SQL*** Find the tissues where miR-1, miR-199a-5p, and miR-181a-5p are expressed in the miRKat database. "
+    ai_message = AIMessage(content=messages)
+    result = sql_node.run_model(ai_message)
+    print(result)
+    assert result
+    result_content = result.text
+    if "error" in result_content and "database" in result_content:
+        raise "Connection to the database error."
+    # convert rest of the content to json
+    # check that result_json has the keys caption, code and notes
+    assert "muscle" in result_content
 
 def test_check_compleatness_model_from_plot_json():
     """
