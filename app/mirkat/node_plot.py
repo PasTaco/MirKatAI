@@ -47,10 +47,12 @@ class PlotNode(node):
         self.model = self.client.chats.create(model=self.llm, config=config_with_code)
 
     def run_model(self, messages):
-        """Run the model with the given messages."""
+        """Run the model with the given messages.
+        the result must be json format in the string"""
         #print(f"--- Message going to the llm_master: {messages}---")
         self.log_message(f"Message going to the node: {messages}")
         inner_tries = 1
+        response_plot = "{}"
         while inner_tries <= 2:
             try:
                 response_plot = self.model.send_message(messages)
@@ -63,7 +65,6 @@ class PlotNode(node):
                     raise e
             finally:
                 inner_tries = inner_tries + 1
-
         return response_plot
     
     def handle_response(self, response_plot):
@@ -83,6 +84,7 @@ class PlotNode(node):
         """
         This function will take the answer and proceed to convert to json
         """
+        response_plot = self.extract_json_from_markdown(response_plot)
         response_json = response_plot
         if isinstance(response_plot, str):
             response_json = json.loads(response_plot)

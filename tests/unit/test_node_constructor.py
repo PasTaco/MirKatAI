@@ -19,8 +19,7 @@ data processing, and other core components of your application.
 import pytest
 
 from app.mirkat.node_constructor import (
-    node,
-    HumanNode
+    node
 )
 from app.mirkat.node_chatbot import ChatbotNode
 from app.mirkat.node_sql import SQLNode
