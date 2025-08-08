@@ -104,6 +104,6 @@ class SQLNode(node):
             "finished": state.get("finished", False), # Use .get for safety
             "answer_source": 'SQL_NODE',
             "trys": state.get("trys", 0) + 1, # Use .get for safety
-            "history": history + [messages], # Update history with the new message
+            "history": history + [str(queries) + response.text], # Update history with the new message
         }
 

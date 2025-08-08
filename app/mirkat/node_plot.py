@@ -126,7 +126,7 @@ class PlotNode(node):
                 "request": AIMessage(content=note + answer_b),
                 "answer_source": 'PlotNode',
                 "trys": state.get("trys", 0) + 1,  # Use .get for safety
-                "history": history + [AIMessage(content=answer)], # Update history with the new message
+                "history": history + [note + answer_b], # Update history with the new message
             }
     
     
