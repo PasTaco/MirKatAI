@@ -21,6 +21,7 @@ class Instructions(Enum):
     plot='PLOT'
     format_answer='FORMAT_ANSWER'
     literature='LITERATURE'
+    general= 'GENERAL'
 
    # We don't need to override __init__ or modify self.value
     def get_instruction(self):

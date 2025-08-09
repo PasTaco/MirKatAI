@@ -32,7 +32,7 @@ class PlotNode(node):
                 "code": {"type": "string"},
                 "notes": {"type": "string"}
             },
-            "required": ["caption", "code"]
+            "required": ["caption", "code", "notes"]
         }
         self.set_model()
 
@@ -59,7 +59,7 @@ class PlotNode(node):
                 inner_tries = 2
             except Exception as e:
                 if inner_tries < 2:
-                    self.log_message(f"Error sending message to Plot model: {e}. Rennuning for {inner_tries} time")
+                    self.log_message(f"Error sending message to Plot model: {e}. Rerunning for {inner_tries} time")
                 else:
                     self.log_message(f"Error sending message to Plot model: {e}. No more retries.")
                     raise e
@@ -100,8 +100,8 @@ class PlotNode(node):
         code = response_json["code"]
         self.log_message(f"Running code {code}")
         plot = self.run_code_plot(code)
-        note = response_json["notes"]
-        answer = response_json["caption"]
+        note = response_json.get("notes","")
+        answer = response_json.get("caption", "")
 
         answer_b = answer
         name = "not_generated"
@@ -126,7 +126,7 @@ class PlotNode(node):
                 "request": AIMessage(content=note + answer_b),
                 "answer_source": 'PlotNode',
                 "trys": state.get("trys", 0) + 1,  # Use .get for safety
-                "history": history + [AIMessage(content=answer)], # Update history with the new message
+                "history": history + [note + answer_b], # Update history with the new message
             }
     
     

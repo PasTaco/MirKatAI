@@ -1,7 +1,9 @@
-from langchain_core.messages import ( 
+
+from langchain_core.messages import (
     AIMessage
     )
 from langchain_google_genai import ChatGoogleGenerativeAI
+from google.genai import types
 from app.mirkat.instructions import Instructions
 import re
 import json
@@ -14,15 +16,34 @@ pwd = os.getcwd()
 class ChatbotNode(node):
     def __init__(self, llm=None, instructions=None, functions=None, welcome=None, complete_answer=None, limit_trys=5):
         super().__init__(llm=llm, instructions=instructions, functions=functions, welcome=welcome, logging_key="Master node.- ")
-        self.llm_master=ChatGoogleGenerativeAI(model=self.llm)
+        self.llm_master= None # ChatGoogleGenerativeAI(model=self.llm)
+        self.llm_complete = None
         if complete_answer:
             self.complete_answer = complete_answer
         else:
             self.complete_answer = Instructions.format_answer.get_instruction()
         self.limit_trys = limit_trys
+        self.schema_complete = {
+            "type": "object",
+            "properties": {
+                "answer": {"type": "string"},
+                "return": {"type": "string"},
+                "media": {"type": "string"},
+                "bibliography": {"type":"string"}
+            },
+            "required": ["answer", "return"]
+        }
+        self.set_model(self.llm)
         
     def set_model(self, model):
         self.llm_master = ChatGoogleGenerativeAI(model=model)
+        config_with_code = types.GenerateContentConfig(
+            temperature=0.2,
+            system_instruction=self.complete_answer,
+            response_schema=self.schema_complete,
+            response_mime_type="application/json"
+        )
+        self.llm_complete = self.client.chats.create(model=model, config=config_with_code)
 
     def run_model(self, messages):
         """Run the model with the given messages."""
@@ -54,6 +75,27 @@ class ChatbotNode(node):
         return json.loads(cleaned)
 
         
+    def is_complete(self, original_query, trys, history, answer_source):
+        """
+        Checks if the original query was satisfied, if not it ask a query to get
+        the full answer
+        :params original_query: (str) orignial question
+        :params trys: (int) Number of loops given to the network
+        :params hisory: (list[str]) all the previous answers obtained
+        :params answer_source: (str) The last node visited.
+        """
+        self.log_message(f"Checking if question {original_query} is answered")
+        message_eval = {'original_query': original_query,"answer_source": answer_source,
+                        "trys": trys, "try_limit": self.limit_trys,
+                        "history": history}
+        message_str = str(message_eval)
+        response = self.llm_complete.send_message(message_str)
+        self.log_message(f"Response from completeness check: {response.text}")
+        cleaned = self.extract_json_from_markdown(content=response.text)
+        self.log_message(f"Cleaned response: {cleaned}")
+        return json.loads(cleaned)
+
+
 
     def get_node(self, state):
         """The chatbot with tools. A simple wrapper around the model's own chat interface."""
@@ -69,9 +111,10 @@ class ChatbotNode(node):
         orginal_query = state.get("original_query", None)
         compleate = False
         history = state.get("history", [])
+        response = AIMessage(content="")
         self.log_message(f"History: {history}")
         if len(history) > 0:
-            messages = history[-1]
+            messages = AIMessage(content=history[-1])
         else:
             history = messages
         trys = state.get("trys", 0)
@@ -80,10 +123,10 @@ class ChatbotNode(node):
             self.log_message(f"Cheking if the the response is complete: {messages.content}")
             response = state['request'].content
             answer_source = state.get("answer_source", None)
-            dict_answer = self.is_compleated(response=response, 
-                                        original_query=orginal_query,
-                                        message=messages, answer_source=answer_source, trys=trys, history=history
-                                        )
+            dict_answer = self.is_complete(original_query=orginal_query,
+                                           answer_source=answer_source,
+                                           trys=trys,
+                                           history=history)
 
             answer = dict_answer.get("answer")
             returned_answer = dict_answer.get("return")
@@ -96,8 +139,12 @@ class ChatbotNode(node):
             messages =  AIMessage(content=f"{returned_answer}")
             response = AIMessage(content=f"{returned_answer}")
         else:
-            self.log_message(f"Getting question from the human")
-            orginal_query = state['messages'][-1]
+            self.log_message(f"Getting question from the human.")
+            try:
+                orginal_query = state['messages'][-1]
+            except TypeError:
+                orginal_query = state['original_query']
+
         self.log_message(f"Compleate is {compleate}, trys is {trys}")
         if not compleate and trys < self.limit_trys:
             self.log_message(f"Original query: {orginal_query}")
@@ -132,10 +179,11 @@ class ChatbotNode(node):
             "request": response, # Add the router's decision/response
             "answer": answer, # Update answer with the router's response
             "finished": finished, # Use .get for safety
+            "bibliography": state.get("bibliography", AIMessage(content="")),
             "original_query": orginal_query, # Add the original query
             "trys": trys + 1, # Increment the number of tries
             "answer_source": 'ChatbotNode', # Add the source of the answer
-            "history": history + [messages], # Update history with the new message
+            "history": history #+ [messages], # Update history with the new message
         }
         return state
 

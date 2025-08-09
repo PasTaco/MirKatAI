@@ -14,11 +14,11 @@ class GraphState(TypedDict):
     messages: List[BaseMessage]
     table: Optional[Dict[str, Any]]
     answer: str
-    bibliography: list
+    bibliography: AIMessage
     research_queries: list
     finished: bool
     original_query: Optional[HumanMessage]
     request: Optional[AIMessage]
     answer_source: Optional[str]
     trys: int
-    history: List[BaseMessage] 
+    history: List[str]
