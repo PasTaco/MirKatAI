@@ -100,9 +100,8 @@ def main():
         question = st.session_state.pending_question
         st.session_state.pending_question = None
 
-    if question:
-        st.chat_message("user").markdown(question)
-        
+
+
     # If a question is asked, process it
     if question:
         st.session_state.messages.append({"role": "user", "content": question})
