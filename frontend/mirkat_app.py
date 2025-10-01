@@ -13,6 +13,8 @@ from langchain_core.messages import HumanMessage
 
 from app.mirkat.instructions import Instructions
 
+from mirkat_sidebar import render_sidebar
+
 EMPTY_CHAT_NAME = "Empty chat"
 _, WELCOME_MSG = Instructions.router.get_instruction()
 
@@ -53,8 +55,16 @@ def setup_page() -> None:
     # Once user_id is set
     st.markdown(WELCOME_MSG.content)
 
-    with st.sidebar:
-        st.markdown("""## Coming soon...""")
+    
+    # Define a callback to inject a question when sidebar button clicked
+    if "pending_question" not in st.session_state:
+        st.session_state.pending_question = None
+
+    def set_question(q):
+        st.session_state.pending_question = q
+
+    # Render the sidebar
+    render_sidebar(set_question_callback=set_question)
 
 
 
@@ -82,10 +92,17 @@ def main():
     # Display chat messages
     for message in messages_stream():
         pass  # Messages are displayed in the generator
-
+    
+    
     # Get user input
     question = get_user_input()
+    if st.session_state.pending_question:
+        question = st.session_state.pending_question
+        st.session_state.pending_question = None
 
+    if question:
+        st.chat_message("user").markdown(question)
+        
     # If a question is asked, process it
     if question:
         st.session_state.messages.append({"role": "user", "content": question})
