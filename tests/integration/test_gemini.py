@@ -81,6 +81,25 @@ def test_sql_run_model():
     #with open(dummy_path + "sql_result.pkl", "wb") as f:
     #    pickle.dump(result, f)
 
+
+def test_sql_number_of_tables_run_model():
+    """
+    This test will make sure that the output from the gemini model is in json fromat
+    """
+    messages = "***ROUTE_TO_SQL***: List all tables in the mirkatdb database."
+    ai_message = AIMessage(content=messages)
+    result = sql_node.run_model(ai_message)
+    print(result)
+    assert result
+    result_content = result.text
+    #result_response = result.candidates[0].content.
+    if "error" in result_content and "database" in result_content:
+        raise "Connection to the database error."
+    # convert rest of the content to json
+    # check that result_json has the keys caption, code and notes
+    assert "mirna_mature" in result_content
+
+
 def test_sql_run_model_kasia():
     """
     This test will make sure that the output from the gemini model is in json fromat
