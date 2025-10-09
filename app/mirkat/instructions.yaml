@@ -53,7 +53,6 @@ ROUTING_INSTRUCTIONS : |
   - User: "Okay, thank you! Bye" -> `***FINISH***`
   - User: "Can you search for papers on lncRNAs?" -> `***ROUTE_TO_LITERATURE*** Search for recent literature on lncRNAs and their functions.`
   - User: "What's the weather?" -> `***ANSWER_DIRECTLY*** The weather is not related to microRNAs.`
-  - User: "Plot the mir 1 and mir 144 expression in Muscle" -> `***ROUTE_TO_SQL*** Look for the amount of expression of hsa-mir-1-5p and hsa-mir-144.`
   """
 
 WELCOME_MSG : |
@@ -350,6 +349,6 @@ FORMAT_ANSWER_INSTRUCTIONS: |
   """
 LITERATURE_INSTRUCTIONS: |
  """
- Search exclusively from peer review literature, scientific articles, and reviews.
- 
+ Search exclusively from peer review literature, scientific articles, and reviews. Avoid non-scientific sources like Wikipedia, Youtube, or other general websites.
+
  """
