@@ -284,3 +284,9 @@ config = {"recursion_limit": 100}
 
 agent = workflow.compile()
 
+def reset_agent():
+    global current_state
+    current_state = initial_state
+    agent = workflow.compile()
+    return agent
+
