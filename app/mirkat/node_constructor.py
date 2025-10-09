@@ -40,18 +40,24 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 
 class node:
-    def __init__(self, llm=None, instructions=None, functions=None, welcome=None, logging_key = None):
+    def __init__(self, llm=None, instructions=None, functions=None, welcome=None, logging_key = None, user=None):
         self.llm = llm
         self.instructions = instructions
         self.functions = functions
         self.welcome = welcome
         self.client = genai.Client(api_key=GOOGLE_API_KEY)
         self.logging_key = logging_key
+        if user is None:
+            self.user = ""
+        else:
+            self.user = user
+    def set_user(self, user):
+        self.user = user
     def get_node(self, state):
         return None
     def log_message(self, message):
         """Log the message to the console."""
-        logging.info(self.logging_key + message)
+        logging.info("User:" + self.user + " " + self.logging_key + " " + message)
     def escape_newlines_in_json_string(self, json_str: str) -> str:
         # Replace literal newlines inside JSON string values only
         def replacer(match):

@@ -309,7 +309,7 @@ def test_literature_get_node(monkeypatch) -> None:
                         lambda *args, **kwargs: ("# markdown text","bibliography", "queries"))
     result = literature_node.get_node(status)
     # check messages is AIMessage
-    assert result['messages'] == AIMessage(content='# markdown textbibliography', additional_kwargs={}, response_metadata={})
+    assert result['messages'] == AIMessage(content='# markdown text', additional_kwargs={}, response_metadata={})
 
 
 def test_sql_get_node(monkeypatch) -> None:

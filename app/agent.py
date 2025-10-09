@@ -210,58 +210,68 @@ def route_after_tools(state: GraphState) -> Literal["sql_processor_node", "liter
          return HUMAN_NODE
     
 
+def get_workflow(user_id=None) -> StateGraph:
+    """Constructs and returns the workflow graph."""
+    if user_id:
+        master_node.set_user(user_id)
+        literature_search_node.set_user(user_id)
+        plot_node.set_user(user_id)
+        sql_node.set_user(user_id)
+    # --- Build the Graph ---
+    workflow = StateGraph(GraphState)
+
+    # Add Nodes
+    workflow.add_node(HUMAN_NODE, human_node)
+    workflow.add_node(CHATBOT_NODE, master_node.get_node)
+    workflow.add_node(SQL_NODE, sql_node.get_node)
+    workflow.add_node(LITERATURE_NODE, literature_search_node.get_node)
+    workflow.add_node(TOOL_NODE, tool_node)
+    workflow.add_node(PLOT_NODE, plot_node.get_node)
 
 
-# --- Build the Graph ---
-workflow = StateGraph(GraphState)
+    # --- Define Edges ---
 
-# Add Nodes
-workflow.add_node(HUMAN_NODE, human_node)
-workflow.add_node(CHATBOT_NODE, master_node.get_node)
-workflow.add_node(SQL_NODE, sql_node.get_node)
-workflow.add_node(LITERATURE_NODE, literature_search_node.get_node)
-workflow.add_node(TOOL_NODE, tool_node)
-workflow.add_node(PLOT_NODE, plot_node.get_node)
+    # 1. Entry Point (Where the graph starts)
+    workflow.set_entry_point(CHATBOT_NODE) # Start with a hello input
 
-
-# --- Define Edges ---
-
-# 1. Entry Point (Where the graph starts)
-workflow.set_entry_point(CHATBOT_NODE) # Start with a hello input
-
-# Add direct edges
-workflow.add_edge(PLOT_NODE, CHATBOT_NODE)
-workflow.add_edge(SQL_NODE, CHATBOT_NODE)
-workflow.add_edge(LITERATURE_NODE, CHATBOT_NODE)
-workflow.add_edge(HUMAN_NODE,END)
-# 2. From Human Node
+    # Add direct edges
+    workflow.add_edge(PLOT_NODE, CHATBOT_NODE)
+    workflow.add_edge(SQL_NODE, CHATBOT_NODE)
+    workflow.add_edge(LITERATURE_NODE, CHATBOT_NODE)
+    workflow.add_edge(HUMAN_NODE,END)
+    # 2. From Human Node
 
 
-# 3. From Main Chatbot Node
-workflow.add_conditional_edges(
-    CHATBOT_NODE,
-    route_chatbot_decision, # Function to decide based on chatbot output
-    {
-        SQL_NODE: SQL_NODE,                 # Route to SQL processor
-        LITERATURE_NODE: LITERATURE_NODE,   # Route to Literature searcher
-        TOOL_NODE: TOOL_NODE,               # Route to execute chatbot's tools (get_menu)
-        HUMAN_NODE: HUMAN_NODE,             # Route to show chatbot's direct answer
-        PLOT_NODE: PLOT_NODE,              # Route to plot node
-        CHATBOT_NODE: CHATBOT_NODE,         # Route back to chatbot for further processing
-        END: END                           # Route to end (though usually handled via human)
-    }
-)
+    # 3. From Main Chatbot Node
+    workflow.add_conditional_edges(
+        CHATBOT_NODE,
+        route_chatbot_decision, # Function to decide based on chatbot output
+        {
+            SQL_NODE: SQL_NODE,                 # Route to SQL processor
+            LITERATURE_NODE: LITERATURE_NODE,   # Route to Literature searcher
+            TOOL_NODE: TOOL_NODE,               # Route to execute chatbot's tools (get_menu)
+            HUMAN_NODE: HUMAN_NODE,             # Route to show chatbot's direct answer
+            PLOT_NODE: PLOT_NODE,              # Route to plot node
+            CHATBOT_NODE: CHATBOT_NODE,         # Route back to chatbot for further processing
+            END: END                           # Route to end (though usually handled via human)
+        }
+    )
 
-# 6. From Tool Node - Route back to the appropriate processor
-workflow.add_conditional_edges(
-    TOOL_NODE,
-    route_after_tools,
-    {
-        SQL_NODE: SQL_NODE,
-        LITERATURE_NODE: LITERATURE_NODE,
-        HUMAN_NODE: HUMAN_NODE # Fallback route
-    }
-)
+    # 6. From Tool Node - Route back to the appropriate processor
+    workflow.add_conditional_edges(
+        TOOL_NODE,
+        route_after_tools,
+        {
+            SQL_NODE: SQL_NODE,
+            LITERATURE_NODE: LITERATURE_NODE,
+            HUMAN_NODE: HUMAN_NODE # Fallback route
+        }
+    )
+    return workflow
+
+
+workflow = get_workflow().compile()
+
 
 
 # define state
@@ -282,5 +292,5 @@ current_state = initial_state
 config = {"recursion_limit": 100}
 
 
-agent = workflow.compile()
+
 

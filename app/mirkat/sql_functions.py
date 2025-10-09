@@ -95,7 +95,7 @@ class DBTools:
         
         return columns
 
-    def describe_tabes(self) -> list[tuple[str,str]]:
+    def describe_tables(self) -> list[tuple[str,str]]:
         """ Looks for the biological description 
         and returns the description of all the tables
         """
