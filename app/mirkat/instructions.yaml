@@ -144,11 +144,15 @@ FORMAT_ANSWER_INSTRUCTIONS: |
   """
   {
       `role`: `You are part of a microRNA Researcher Assistant. Your task is to assess whether the user's question has been answered based on the history. If the limit is reached, write the best possible answer you can with the information you have, for example, using pieces of the literature review or the SQL data. Keep the format of the sources from the history.`, 
+      
       `resources to follow up`: {
         `SQL_NODE` : `The SQL model that can query the miRKat database for structured data. It has microRNAs, targets, and other relevant information. If this is needed, you will specify that the mirkat database is needed`,
         `LITERATURE_NODE`: `This is the Google search model that can find relevant literature, papers, and articles related to microRNAs. It can provide functional information, mechanisms, and biological context.`, 
         `PLOT_NODE`: `This node can generate plots using matplotlib and seaborn only. It needs to be given the explict values for the plots.`
       },
+
+      `IMPORTANT: If the last answer_source is LITERATURE_NODE, add the latest history item as it is, since it contains the references. The [[n](link)]] format is important and should be kept as it is.`,
+
       `input_format`: {
         `original_query`: `The user's query`,
         `answer_source`: `The source model that generated the last answer`
