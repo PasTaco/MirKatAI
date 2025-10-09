@@ -7,7 +7,7 @@ if current_path.endswith("app"):
     sys.path.append("../tests")
 
 import pytest
-from app.agent import agent
+from app.agent import get_workflow
 from unittest.mock import patch, MagicMock
 
 
@@ -15,17 +15,17 @@ from unittest.mock import patch, MagicMock
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 @pytest.fixture
-def workflow():
+def get_the_workflow():
     """Fixture to create and set up the agent workflow."""
-    return agent
+    return get_workflow(user_id = "test_user").compile()
 
 
 
-def test_agent_direct_answer(workflow) -> None:
+def test_agent_direct_answer(get_the_workflow) -> None:
     state = {
         "messages":["who are you?"]
     }
-    result = workflow.invoke(state)
+    result = get_the_workflow.invoke(state)
     response = result.get("messages", "").content
     source = result.get("answer_source", "")
     history = result.get("history", [])
@@ -40,11 +40,11 @@ def test_agent_direct_answer(workflow) -> None:
 
 
 
-def test_agent_wrong_question(workflow) -> None:
+def test_agent_wrong_question(get_the_workflow) -> None:
     state = {
         "messages":["How to make a proper carbonara?"]
     }
-    result = workflow.invoke(state)
+    result = get_the_workflow.invoke(state)
     response = result.get("messages", "").content
     source = result.get("answer_source", "")
     history = result.get("history", [])
@@ -58,11 +58,11 @@ def test_agent_wrong_question(workflow) -> None:
     assert trys == 2 # check trys is 2, as it should be a direct answer
 
 
-def test_agent_sql_query(workflow) -> None:
+def test_agent_sql_query(get_the_workflow) -> None:
     state = {
         "messages":["From the SQL database, how many targets has hsa-miR-1-p5?"]
     }
-    result = workflow.invoke(state)
+    result = get_the_workflow.invoke(state)
     response = result.get("messages", "").content
     history = result.get("history", [])
     assert isinstance(response, str) # check response is a string
@@ -74,11 +74,11 @@ def test_agent_sql_query(workflow) -> None:
 
 
 
-def test_agent_literature_query(workflow) -> None:
+def test_agent_literature_query(get_the_workflow) -> None:
     state = {
         "messages":["Search in the literature if hsa-miR-1-p5 is involved in cancer."]
     }
-    result = workflow.invoke(state)
+    result = get_the_workflow.invoke(state)
     response = result.get("messages", "").content
     history = result.get("history", [])
     assert isinstance(response, str) # check response is a string
@@ -88,11 +88,11 @@ def test_agent_literature_query(workflow) -> None:
     #assert "***ROUTE_TO_LITERATURE***" in history[1]
 
 
-def test_agent_plot_query(workflow) -> None:
+def test_agent_plot_query(get_the_workflow) -> None:
     state = {
         "messages":["Plot a barplot with miR1=5 and miR2=10."]
     }
-    result = workflow.invoke(state)
+    result = get_the_workflow.invoke(state)
     response = result.get("messages", "").content
 
     history = result.get("history", [])
