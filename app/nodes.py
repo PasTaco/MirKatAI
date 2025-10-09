@@ -68,7 +68,7 @@ db_tools = [
     db_tools_instance.list_tables,
     db_tools_instance.get_table_schema,
     db_tools_instance.describe_columns,
-    db_tools_instance.describe_tabes,
+    db_tools_instance.describe_tables,
     db_tools_instance.execute_query
 ]
 
