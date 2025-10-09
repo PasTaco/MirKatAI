@@ -4,7 +4,7 @@ import pandas as pd
 import uuid
 
 
-from app.agent import agent
+from app.agent import get_workflow, workflow
 #### create or load vector database:
 from PIL import Image
 
@@ -37,7 +37,12 @@ def setup_page() -> None:
     # Only assign a UUID if one doesn't already exist in this session
     if "user_id" not in st.session_state:
         st.session_state.user_id = str(uuid.uuid4())
+        print(f"Assigned new user_id: {st.session_state.user_id}")
+    workflow = get_workflow(user_id=st.session_state.user_id)
+    global agent
 
+    agent = workflow.compile()
+    st.markdown(f"user_id: {st.session_state.user_id}")
     # Load SVG logo
     logo = Image.open("frontend/assets/MiRkatAI.png")
     st.markdown(
@@ -88,7 +93,6 @@ def get_user_input():
 def main():
     """Main function to run the Streamlit app."""
     setup_page()
-
     # Display chat messages
     for message in messages_stream():
         pass  # Messages are displayed in the generator
@@ -110,8 +114,7 @@ def main():
             "session_id": st.session_state.user_id,
             "messages": [st.session_state.messages[-1]['content']],
         }
-        workflow = agent
-        result = workflow.invoke(state)
+        result = agent.invoke(state)
         assistant_response = result.get("messages", "").content
         assistant_bibliography = result.get("bibliography", "").content
         # strip ****FINAL RESPONSE**** prefix if present
