@@ -110,8 +110,8 @@ class LiteratureNode(node):
         message_text = answer + bibliography
         messageAI = AIMessage(content=message_text)
         return {**state,
-        "messages":messageAI,
-        "answer": AIMessage(content= answer+bibliography),
+        "messages":AIMessage(content= answer),
+        "answer": AIMessage(content= answer),
         "bibliography": AIMessage(content= bibliography),
-        "history": history + [message_text],
+        "history": history + [answer],
         "answer_source": 'LiteratureNode',}

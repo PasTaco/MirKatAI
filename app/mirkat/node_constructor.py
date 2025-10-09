@@ -47,7 +47,10 @@ class node:
         self.welcome = welcome
         self.client = genai.Client(api_key=GOOGLE_API_KEY)
         self.logging_key = logging_key
-        self.user = user
+        if user is None:
+            self.user = ""
+        else:
+            self.user = user
     def set_user(self, user):
         self.user = user
     def get_node(self, state):
