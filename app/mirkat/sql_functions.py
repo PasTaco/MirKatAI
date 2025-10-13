@@ -1,6 +1,7 @@
 import mysql.connector
 from mysql.connector import errorcode # Specific import from the same library
 import csv
+import logging
 
 
 class MySqlConnection:
@@ -49,6 +50,7 @@ class DBTools:
         """Retrieve the names of all tables in the database."""
         # Include print logging statements so you can see when functions are being called.
         print(' - DB CALL: list_tables()')
+        logging.info(' - DB CALL: list_tables()')
 
         cursor = self.db_conn.cursor()
 
@@ -65,7 +67,7 @@ class DBTools:
         List of columns, where each entry is a tuple of (column, type).
         """
         print(f' - DB CALL: describe_table({table_name})')
-
+        logging.info(f' - DB CALL: describe_table({table_name})')
         cursor = self.db_conn.cursor()
 
         cursor.execute(f"DESCRIBE `{table_name}`;")
@@ -82,6 +84,8 @@ class DBTools:
             Returns:
                 list[tuple[str,str]]: List of tuples containing column names and their descriptions
         """
+        print(f' - DB CALL: describe_columns({table_name})')
+        logging.info(f' - DB CALL: describe_columns({table_name})')
         # Check if the table name exists in the DataFrame
         if table_name not in self.mirkat_columns_desctiption['Table'].values:
             print(f"Error: Table '{table_name}' not found.")
@@ -99,6 +103,8 @@ class DBTools:
         """ Looks for the biological description 
         and returns the description of all the tables
         """
+        print(' - DB CALL: describe_tables()')
+        logging.info(' - DB CALL: describe_tables()')
         # Extract table names and descriptions
         tables = list(zip(self.mirkat_tables_desctiption['Table'], self.mirkat_tables_desctiption['Description']))
         
@@ -110,6 +116,7 @@ class DBTools:
             params query_name: name of the query only alfanumeric characters.
             """
         print(f' - DB CALL: execute_query({sql})')
+        logging.info(f' - DB CALL: execute_query({sql})')
         self.db_conn.ping(reconnect=True)  # Reconnect if the connection is lost
         cursor = self.db_conn.cursor()
 

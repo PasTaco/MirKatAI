@@ -106,6 +106,9 @@ SQL_INSTRUCTIONS : |
   human query: What are the seeds of the microRNAs that expressed in muscle and how many of those mirnas have said seed?
   sql_query: execute_query(SELECT ms.seed, COUNT(DISTINCT mt.mirna) FROM mirna_seeds ms JOIN mirna_mature mm ON ms.auto_mature = mm.mature_name JOIN mirna_pre_mature mpm ON mm.auto_mature = mpm.auto_mature JOIN mirna m ON mpm.auto_mirna = m.auto_mirna JOIN mirna_tissues mt ON m.mirna_ID = mt.mirna WHERE mt.organ = 'muscle' GROUP BY ms.seed
  
+  human query: What are the mirs that target STIM1 and its referece sequences (refseq)?
+  sql_query: select distinct mirna_mature from gene_mirna where mrna = 'STIM1' or mrna in (Select refseq_mrna from gene_names where gene_symbol = 'STIM1');
+
 
   REMEMBER: all calls to the tool execute_query need the sql query and the query name.
   """
