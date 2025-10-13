@@ -207,3 +207,5 @@ tests/unit/file
 your_database.db
 log.txt
 logs_3.txt
+evaluation/results/*
+evaluation/data/*

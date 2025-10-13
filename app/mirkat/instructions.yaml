@@ -106,6 +106,8 @@ SQL_INSTRUCTIONS : |
   human query: What are the seeds of the microRNAs that expressed in muscle and how many of those mirnas have said seed?
   sql_query: execute_query(SELECT ms.seed, COUNT(DISTINCT mt.mirna) FROM mirna_seeds ms JOIN mirna_mature mm ON ms.auto_mature = mm.mature_name JOIN mirna_pre_mature mpm ON mm.auto_mature = mpm.auto_mature JOIN mirna m ON mpm.auto_mirna = m.auto_mirna JOIN mirna_tissues mt ON m.mirna_ID = mt.mirna WHERE mt.organ = 'muscle' GROUP BY ms.seed
  
+
+  REMEMBER: all calls to the tool execute_query need the sql query and the query name.
   """
 
 

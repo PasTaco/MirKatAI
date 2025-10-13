@@ -110,7 +110,7 @@ class DBTools:
             params query_name: name of the query only alfanumeric characters.
             """
         print(f' - DB CALL: execute_query({sql})')
-
+        self.db_conn.ping(reconnect=True)  # Reconnect if the connection is lost
         cursor = self.db_conn.cursor()
 
         cursor.execute(sql)
