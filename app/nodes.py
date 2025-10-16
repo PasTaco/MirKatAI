@@ -82,3 +82,16 @@ sql_node = SQLNode(llm=LLM_SQL, instructions=SQL_INSTRUCTIONS, functions=db_tool
 all_tools = db_tools # Add literature search tools here if they were LangChain tools
 tool_node = ToolNode(all_tools)
 
+def reset_sql_node():
+    global sql_node
+    sql_node = SQLNode(llm=LLM_SQL, instructions=SQL_INSTRUCTIONS, functions=db_tools)
+
+
+def create_nodes():
+    master_node = ChatbotNode(llm=LLM, instructions=MIRNA_ASSISTANT_SYSTEM_MESSAGE)
+    literature_search_node = LiteratureNode(llm=LLM, functions=LiteratureTools, instructions=LITERATURE_INSTRUCTIONS)
+    plot_node = PlotNode(llm=LLM_PLOT, instructions=PLOT_INSTRUCTIONS)
+    sql_node = SQLNode(llm=LLM_SQL, instructions=SQL_INSTRUCTIONS, functions=db_tools)
+    all_tools = db_tools # Add literature search tools here if they were LangChain tools
+    tool_node = ToolNode(all_tools)
+    return master_node, literature_search_node, plot_node, sql_node, tool_node
