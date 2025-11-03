@@ -105,7 +105,7 @@ class LiteratureNode(node):
 
         answer,bibliography, research_queries= self.format_text(response)
 
-        
+        answer_no_links, dict_sources = self.cript_links(answer)
         history = state.get("history", [])
         message_text = answer + bibliography
         messageAI = AIMessage(content=message_text)
@@ -113,5 +113,6 @@ class LiteratureNode(node):
         "messages":AIMessage(content= answer),
         "answer": AIMessage(content= answer),
         "bibliography": AIMessage(content= bibliography),
-        "history": history + [answer],
+        "bibliography_dict": dict_sources,
+        "history": history + [answer_no_links],
         "answer_source": 'LiteratureNode',}

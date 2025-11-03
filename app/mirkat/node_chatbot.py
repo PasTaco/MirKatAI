@@ -135,6 +135,12 @@ class ChatbotNode(node):
             if compleate:
                 #returned_answer = "***FINISH***" + returned_answer
                 finished = True
+                if state["bibliography_dict"]:
+                    self.log_message(f"Answer with placeholders:{returned_answer}")
+                    returned_answer = self.decrypt_links(returned_answer, state["bibliography_dict"])
+                    self.log_message(f"Answer with the links: {returned_answer}")
+                else:
+                    self.log_message("No links to add")
 
             messages =  AIMessage(content=f"{returned_answer}")
             response = AIMessage(content=f"{returned_answer}")
