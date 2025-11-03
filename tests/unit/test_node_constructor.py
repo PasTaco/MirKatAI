@@ -336,4 +336,33 @@ def test_sql_get_node(monkeypatch) -> None:
     assert result["answer"].content == "Mir1"
 
 
+def test_cript_links(monkeypatch) -> None:
+    """Check that the node encrypts text links correctly."""
+    node_obj = node()
+    original_text = "**miR-1:** Found in both skeletal and cardiac muscle, miR-1 promotes myoblast-to-myotube differentiation.[[1](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEP0ti4OvriOzm0RAiT_kEBKue1jhK-P-pbSkuVs6fEg8LaZJtTzCMBbSPk_AptE8RIRa7pDOeO_vit7JrzLHDwFo1xZPczeJSg3wA4pQzB3P9gLRpuqfe04rhI7fp-K8_npwStYGS4-CFSlA==)] It is essential for skeletal muscle growth and function.[[2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHaoaHwIKjUSH6Kej52IwG9oQjJ3tep90YgiAPNQayN04HoWSLkQ5iL3AjMHTyeocODJOn195rHzTmHSxEpt9vU-7y07wXFMzZoYr0f12Iz-HhIsBXJCw5_NvHSbZMOkTthSpc=)]\n* "
+    modified_text, source_dict = node_obj.cript_links(original_text)
+    print(modified_text)
+    print(source_dict)
+    assert "[source1]" in modified_text
+    assert "[source2]" in modified_text
+    source_1 = "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEP0ti4OvriOzm0RAiT_kEBKue1jhK-P-pbSkuVs6fEg8LaZJtTzCMBbSPk_AptE8RIRa7pDOeO_vit7JrzLHDwFo1xZPczeJSg3wA4pQzB3P9gLRpuqfe04rhI7fp-K8_npwStYGS4-CFSlA=="
+    source_2 = "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHaoaHwIKjUSH6Kej52IwG9oQjJ3tep90YgiAPNQayN04HoWSLkQ5iL3AjMHTyeocODJOn195rHzTmHSxEpt9vU-7y07wXFMzZoYr0f12Iz-HhIsBXJCw5_NvHSbZMOkTthSpc="
+    assert source_dict["[source1]"] == source_1
+    assert source_dict["[source2]"] == source_2
+
+def test_decrypt_links(monkeypatch) -> None:
+    """Check that the node decrypts text links correctly."""
+    node_obj = node()
+    original_text = "**miR-1:** Found in both skeletal and cardiac muscle, miR-1 promotes myoblast-to-myotube differentiation.[[1](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEP0ti4OvriOzm0RAiT_kEBKue1jhK-P-pbSkuVs6fEg8LaZJtTzCMBbSPk_AptE8RIRa7pDOeO_vit7JrzLHDwFo1xZPczeJSg3wA4pQzB3P9gLRpuqfe04rhI7fp-K8_npwStYGS4-CFSlA==)] It is essential for skeletal muscle growth and function.[[2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHaoaHwIKjUSH6Kej52IwG9oQjJ3tep90YgiAPNQayN04HoWSLkQ5iL3AjMHTyeocODJOn195rHzTmHSxEpt9vU-7y07wXFMzZoYr0f12Iz-HhIsBXJCw5_NvHSbZMOkTthSpc=)]\n* "
+    crypted_text = "**miR-1:** Found in both skeletal and cardiac muscle, miR-1 promotes myoblast-to-myotube differentiation.[source1] It is essential for skeletal muscle growth and function.[source2]\n* "
+    source_1 = "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEP0ti4OvriOzm0RAiT_kEBKue1jhK-P-pbSkuVs6fEg8LaZJtTzCMBbSPk_AptE8RIRa7pDOeO_vit7JrzLHDwFo1xZPczeJSg3wA4pQzB3P9gLRpuqfe04rhI7fp-K8_npwStYGS4-CFSlA=="
+    source_2 = "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHaoaHwIKjUSH6Kej52IwG9oQjJ3tep90YgiAPNQayN04HoWSLkQ5iL3AjMHTyeocODJOn195rHzTmHSxEpt9vU-7y07wXFMzZoYr0f12Iz-HhIsBXJCw5_NvHSbZMOkTthSpc="
+    
+    source_dict = {
+        "[source1]": source_1,
+        "[source2]": source_2
+    }
+    decrypted_text = node_obj.decrypt_links(crypted_text, source_dict)
+    print(decrypted_text)
+    assert original_text == decrypted_text
 
