@@ -350,6 +350,23 @@ def test_cript_links(monkeypatch) -> None:
     assert source_dict["[source1]"] == source_1
     assert source_dict["[source2]"] == source_2
 
+def test_cript_links_multiple(monkeypatch) -> None:
+    original_text = "MicroRNAs (miRNAs) are small non-coding RNAs that play a crucial role in regulating gene expression and have been implicated in the development of sarcopenia." \
+    "[[1](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGrgn08Bhxge8d74E-Y6tQaZo2JEjATx8-N4weY52rm4zU7C4WRVozR0ZcBbiBk10m26ONW4Pgt1ODYmNVycLzdULDsFDoSbEFq6ZRGa6h17EIWl921u0RAMOwM_lt0X1NB8WMkVj9SQUNq)," \
+    "[2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu)] " \
+    "Alterations in miRNA expression levels can contribute to muscle atrophy and sarcopenia by affecting various signaling pathways.[[2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu)]"
+    node_obj = node()
+    modified_text, source_dict = node_obj.cript_links(original_text)
+    print(modified_text)
+    print(source_dict)
+    assert "[source1]" in modified_text
+    assert "[source2]" in modified_text
+    source_1 =  "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGrgn08Bhxge8d74E-Y6tQaZo2JEjATx8-N4weY52rm4zU7C4WRVozR0ZcBbiBk10m26ONW4Pgt1ODYmNVycLzdULDsFDoSbEFq6ZRGa6h17EIWl921u0RAMOwM_lt0X1NB8WMkVj9SQUNq"
+    source_2 =  "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu"
+    assert source_dict["[source1]"] == source_1
+    assert source_dict["[source2]"] == source_2
+    
+
 def test_decrypt_links(monkeypatch) -> None:
     """Check that the node decrypts text links correctly."""
     node_obj = node()
