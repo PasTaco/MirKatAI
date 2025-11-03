@@ -20,13 +20,15 @@ class SQLNode(node):
             system_instruction=self.instructions,
             tools=self.functions,
             temperature=0.0,
-            max_output_tokens=600,
+            max_output_tokens=600
             )
+        #http_options=HttpOptions(timeout=GEMINI_TIMEOUT)
 
         # Start a chat with automatic function calling enabled.
         self.chat = self.client.chats.create(
             model=self.llm,
             config=config_tools,
+            
         )
 
     
