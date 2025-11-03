@@ -29,7 +29,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 LOCATION = "europe-west1"
 LLM_ROUTE = "gemini-2.-flash-lite"
 LLM = "gemini-2.5-flash-lite"
-LLM_SQL = "gemini-2.0-flash-lite"
+LLM_SQL = "gemini-2.5-flash"
 LLM_PLOT = "gemini-2.5-flash-lite"
 ###### define instructions for nodes
 
