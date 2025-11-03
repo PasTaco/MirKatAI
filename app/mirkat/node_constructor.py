@@ -18,6 +18,8 @@ import json
 import sys
 # save logs
 import logging
+import regex
+
 # Make sure stdout/stderr use UTF-8
 sys.stdout.reconfigure(encoding='utf-8')
 sys.stderr.reconfigure(encoding='utf-8')
@@ -68,7 +70,7 @@ class node:
 
         [[4](https://vertexaisearch.cloud.google.com/grounding-api-redirect/longstring)]
 
-        or accumulate multiople links like
+        or accumulate multiple links like
          [[4](https://vertexaisearch.cloud.google.com/grounding-api-redirect/longstring),[5](https://vertexaisearch.cloud.google.com/grounding-api-redirect/other_longstring)]
 
         Args:
@@ -77,41 +79,35 @@ class node:
             tuple[str, dict]: The text with the mapped links and the dictionary with the original links
         """
         BASE_URL_RE = r"https://vertexaisearch\.cloud\.google\.com/grounding-api-redirect/[^\)]+"
+
         source_dict = {}
         modified_answer = original_answer
 
-        # ---Match the entire [[[1](url),[2](url),...,[n](url)]] block ---
-        multi_pattern = (
-            r"(\[\[(?:\[\d+\]\(" + BASE_URL_RE + r"\))(?:,\s*\[\d+\]\(" + BASE_URL_RE + r"\))*\]\])"
-        )
+        pattern_big_brackets = regex.compile(r"\[(?:[^\[\]]|(?R))*\]")
 
-        for full_block in re.findall(multi_pattern, original_answer):
-            # Extract each [n](url) inside the block
-            inner_links = re.findall(r"\[(\d+)\]\((" + BASE_URL_RE + r")\)", full_block)
+        matches_big_brackets = pattern_big_brackets.findall(modified_answer)
+
+        inner_pattern = re.compile(rf"\[(\d+)\]\(({BASE_URL_RE})\)")
+
+        for full_block in matches_big_brackets:
+            # find all [n](url) inside this block
+            inner_links = inner_pattern.findall(full_block)
             if not inner_links:
                 continue
 
             source_keys = []
-            for match_num, full_link in inner_links:
-                source_key = f"[source{match_num}]"
-                if source_key not in source_dict:
-                    source_dict[source_key] = full_link
-                source_keys.append(source_key)
+            for num, url in inner_links:
+                key = f"[source{num}]"
+                if key not in source_dict:
+                    source_dict[key] = url
+                source_keys.append(key)
 
-            replacement_string = "[" + ",".join(source_keys) + "]"
-            modified_answer = modified_answer.replace(full_block, replacement_string, 1)
-
-        # ---Handle remaining single [[n](url)]] links ---
-        single_pattern = r"\[\[(\d+)\]\((" + BASE_URL_RE + r")\)\]"
-        for match_num, full_link in re.findall(single_pattern, original_answer):
-            source_key = f"[source{match_num}]"
-            if source_key not in source_dict:
-                source_dict[source_key] = full_link
-            link_block = f"[[{match_num}]({full_link})]"
-            modified_answer = modified_answer.replace(link_block, source_key, 1)
-
+            # create replacement string
+            replacement = "[" + ",".join(source_keys) + "]"
+            # replace the original block in the text
+            modified_answer = modified_answer.replace(f"{full_block}", replacement, 1)
         return modified_answer, source_dict
-    
+
     def decrypt_links(self, answer_with_links: str, source_dict: dict) -> str:
         """ This Function will take the text that contain the mapped links like [source1], [source2], etc.
         It will replace the mapped links with the original links from the source_dict.
@@ -126,7 +122,7 @@ class node:
         for source_key, full_link in source_dict.items():
             # replace [source1[ with just [[1](full_link)]]]
             source_name = source_key.replace("source", "")
-            modified_answer = modified_answer.replace(source_key, f"[{source_name}({full_link})]")
+            modified_answer = modified_answer.replace(source_key, f"{source_name}({full_link})")
         return modified_answer
 
     def escape_newlines_in_json_string(self, json_str: str) -> str:

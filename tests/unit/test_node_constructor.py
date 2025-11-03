@@ -351,9 +351,7 @@ def test_cript_links(monkeypatch) -> None:
     assert source_dict["[source2]"] == source_2
 
 def test_cript_links_multiple(monkeypatch) -> None:
-    original_text = "MicroRNAs (miRNAs) are small non-coding RNAs that play a crucial role in regulating gene expression and have been implicated in the development of sarcopenia." \
-    "[[1](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGrgn08Bhxge8d74E-Y6tQaZo2JEjATx8-N4weY52rm4zU7C4WRVozR0ZcBbiBk10m26ONW4Pgt1ODYmNVycLzdULDsFDoSbEFq6ZRGa6h17EIWl921u0RAMOwM_lt0X1NB8WMkVj9SQUNq)," \
-    "[2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu)] " \
+    original_text = "MicroRNAs (miRNAs) are small non-coding RNAs that play a crucial role in regulating gene expression and have been implicated in the development of sarcopenia.[[1](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGrgn08Bhxge8d74E-Y6tQaZo2JEjATx8-N4weY52rm4zU7C4WRVozR0ZcBbiBk10m26ONW4Pgt1ODYmNVycLzdULDsFDoSbEFq6ZRGa6h17EIWl921u0RAMOwM_lt0X1NB8WMkVj9SQUNq),[2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu)] " \
     "Alterations in miRNA expression levels can contribute to muscle atrophy and sarcopenia by affecting various signaling pathways.[[2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu)]"
     node_obj = node()
     modified_text, source_dict = node_obj.cript_links(original_text)
@@ -365,13 +363,13 @@ def test_cript_links_multiple(monkeypatch) -> None:
     source_2 =  "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu"
     assert source_dict["[source1]"] == source_1
     assert source_dict["[source2]"] == source_2
-    
+
 
 def test_decrypt_links(monkeypatch) -> None:
     """Check that the node decrypts text links correctly."""
     node_obj = node()
     original_text = "**miR-1:** Found in both skeletal and cardiac muscle, miR-1 promotes myoblast-to-myotube differentiation.[[1](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEP0ti4OvriOzm0RAiT_kEBKue1jhK-P-pbSkuVs6fEg8LaZJtTzCMBbSPk_AptE8RIRa7pDOeO_vit7JrzLHDwFo1xZPczeJSg3wA4pQzB3P9gLRpuqfe04rhI7fp-K8_npwStYGS4-CFSlA==)] It is essential for skeletal muscle growth and function.[[2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHaoaHwIKjUSH6Kej52IwG9oQjJ3tep90YgiAPNQayN04HoWSLkQ5iL3AjMHTyeocODJOn195rHzTmHSxEpt9vU-7y07wXFMzZoYr0f12Iz-HhIsBXJCw5_NvHSbZMOkTthSpc=)]\n* "
-    crypted_text = "**miR-1:** Found in both skeletal and cardiac muscle, miR-1 promotes myoblast-to-myotube differentiation.[source1] It is essential for skeletal muscle growth and function.[source2]\n* "
+    crypted_text = "**miR-1:** Found in both skeletal and cardiac muscle, miR-1 promotes myoblast-to-myotube differentiation.[[source1]] It is essential for skeletal muscle growth and function.[[source2]]\n* "
     source_1 = "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEP0ti4OvriOzm0RAiT_kEBKue1jhK-P-pbSkuVs6fEg8LaZJtTzCMBbSPk_AptE8RIRa7pDOeO_vit7JrzLHDwFo1xZPczeJSg3wA4pQzB3P9gLRpuqfe04rhI7fp-K8_npwStYGS4-CFSlA=="
     source_2 = "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHaoaHwIKjUSH6Kej52IwG9oQjJ3tep90YgiAPNQayN04HoWSLkQ5iL3AjMHTyeocODJOn195rHzTmHSxEpt9vU-7y07wXFMzZoYr0f12Iz-HhIsBXJCw5_NvHSbZMOkTthSpc="
     
@@ -383,3 +381,35 @@ def test_decrypt_links(monkeypatch) -> None:
     print(decrypted_text)
     assert original_text == decrypted_text
 
+
+def test_decrypt_many_links(monkeypatch) -> None:
+    """Check that the node decrypts text links correctly."""
+    node_obj = node()
+    original_text = "MicroRNAs (miRNAs) are small non-coding RNAs that play a crucial role in regulating gene expression and have been implicated in the development of sarcopenia.[[1](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGrgn08Bhxge8d74E-Y6tQaZo2JEjATx8-N4weY52rm4zU7C4WRVozR0ZcBbiBk10m26ONW4Pgt1ODYmNVycLzdULDsFDoSbEFq6ZRGa6h17EIWl921u0RAMOwM_lt0X1NB8WMkVj9SQUNq),[2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu)] " \
+    "Alterations in miRNA expression levels can contribute to muscle atrophy and sarcopenia by affecting various signaling pathways.[[2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu)]"
+    crypted_text = "MicroRNAs (miRNAs) are small non-coding RNAs that play a crucial role in regulating gene expression and have been implicated in the development of sarcopenia.[[source1],[source2]] Alterations in miRNA expression levels can contribute to muscle atrophy and sarcopenia by affecting various signaling pathways.[[source2]]"
+    source_1 =  "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGrgn08Bhxge8d74E-Y6tQaZo2JEjATx8-N4weY52rm4zU7C4WRVozR0ZcBbiBk10m26ONW4Pgt1ODYmNVycLzdULDsFDoSbEFq6ZRGa6h17EIWl921u0RAMOwM_lt0X1NB8WMkVj9SQUNq"
+    source_2 =  "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu"
+    
+    source_dict = {
+        "[source1]": source_1,
+        "[source2]": source_2
+    }
+    decrypted_text = node_obj.decrypt_links(crypted_text, source_dict)
+    print(decrypted_text)
+    assert original_text == decrypted_text
+
+def test_cryp_decrypt(monkeypatch) -> None:
+    """Check that the node encrypts and decrypts text links correctly."""
+    original_text = "MicroRNAs (miRNAs) are small non-coding RNAs that play a crucial role in regulating gene expression and have been implicated in the development of sarcopenia.[[1](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGrgn08Bhxge8d74E-Y6tQaZo2JEjATx8-N4weY52rm4zU7C4WRVozR0ZcBbiBk10m26ONW4Pgt1ODYmNVycLzdULDsFDoSbEFq6ZRGa6h17EIWl921u0RAMOwM_lt0X1NB8WMkVj9SQUNq),[2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu)] " \
+    "Alterations in miRNA expression levels can contribute to muscle atrophy and sarcopenia by affecting various signaling pathways.[[2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu)]"
+    node_obj = node()
+    modified_text, source_dict = node_obj.cript_links(original_text)
+    decrypted_text = node_obj.decrypt_links(modified_text, source_dict)
+    print("Original Text:")
+    print(original_text)
+    print("Modified Text:")
+    print(modified_text)
+    print("Decrypted Text:")
+    print(decrypted_text)
+    assert original_text == decrypted_text
