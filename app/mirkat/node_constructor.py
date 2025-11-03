@@ -57,6 +57,8 @@ class node:
         return None
     def log_message(self, message):
         """Log the message to the console."""
+        if type(message) is not str:
+            message = str(message)
         logging.info("User:" + self.user + " " + self.logging_key + " " + message)
 
     def cript_links(self, original_answer: str) -> tuple[str, dict]:
@@ -65,24 +67,56 @@ class node:
         The text link will have a fromat
 
         [[4](https://vertexaisearch.cloud.google.com/grounding-api-redirect/longstring)]
+
+        or accumulate multiople links like
+         [[4](https://vertexaisearch.cloud.google.com/grounding-api-redirect/longstring),[5](https://vertexaisearch.cloud.google.com/grounding-api-redirect/other_longstring)]
+
         Args:
             original_answer (str): The original text with the links.
         Returns:
             tuple[str, dict]: The text with the mapped links and the dictionary with the original links
         """
+        BASE_URL_RE = r"https://vertexaisearch\.cloud\.google\.com/grounding-api-redirect/[^\)]+"
         source_dict = {}
         modified_answer = original_answer
-        pattern = r"\[\[(\d+)\]\(https://vertexaisearch\.cloud\.google\.com/grounding-api-redirect/[^\)]+\)\]"
-        matches = re.findall(pattern, original_answer)
-        for match in matches:
-            source_key = f"[source{match}]"
-            if source_key not in source_dict:
-                full_link_pattern = r"\[\[" + match + r"\]\((https://vertexaisearch\.cloud\.google\.com/grounding-api-redirect/[^\)]+)\)\]"
-                full_link_match = re.search(full_link_pattern, original_answer)
-                if full_link_match:
-                    full_link = full_link_match.group(1)
+
+        # --- 1️⃣ Handle multi-link groups first ---
+        multi_pattern = (
+            r"\[\["
+            r"(\[\d+\]\(" + BASE_URL_RE + r"\)(?:,\s*\[\d+\]\(" + BASE_URL_RE + r"\))*)"
+            r"\]\]"
+        )
+
+        for multi_block in re.findall(multi_pattern, original_answer):
+            # Extract each [number](url)
+            inner_links = re.findall(r"\[(\d+)\]\((" + BASE_URL_RE + r")\)", multi_block)
+            source_keys = []
+
+            for match_num, full_link in inner_links:
+                source_key = f"[source{match_num}]"
+                if source_key not in source_dict:
                     source_dict[source_key] = full_link
-                    modified_answer = re.sub(full_link_pattern, source_key, modified_answer, count=1)
+                source_keys.append(source_key)
+
+            replacement_string = "[" + ",".join(source_keys) + "]"
+
+            # Escape special chars before substitution
+            escaped_block = re.escape(f"[[{multi_block}]]")
+            modified_answer = re.sub(escaped_block, replacement_string, modified_answer, count=1)
+
+        # --- 2️⃣ Handle single links (that weren't in multi-blocks) ---
+        single_pattern = (
+            r"\[\[(\d+)\]\((" + BASE_URL_RE + r")\)\]"
+        )
+        for match_num, full_link in re.findall(single_pattern, original_answer):
+            source_key = f"[source{match_num}]"
+            if source_key not in source_dict:
+                source_dict[source_key] = full_link
+            # Replace once per link
+            link_block = f"[[{match_num}]({full_link})]"
+            escaped_block = re.escape(link_block)
+            modified_answer = re.sub(escaped_block, source_key, modified_answer, count=1)
+
         return modified_answer, source_dict
     
     def decrypt_links(self, answer_with_links: str, source_dict: dict) -> str:
