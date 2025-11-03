@@ -80,18 +80,18 @@ class node:
         source_dict = {}
         modified_answer = original_answer
 
-        # --- 1️⃣ Handle multi-link groups first ---
+        # ---Match the entire [[[1](url),[2](url),...,[n](url)]] block ---
         multi_pattern = (
-            r"\[\["
-            r"(\[\d+\]\(" + BASE_URL_RE + r"\)(?:,\s*\[\d+\]\(" + BASE_URL_RE + r"\))*)"
-            r"\]\]"
+            r"(\[\[(?:\[\d+\]\(" + BASE_URL_RE + r"\))(?:,\s*\[\d+\]\(" + BASE_URL_RE + r"\))*\]\])"
         )
 
-        for multi_block in re.findall(multi_pattern, original_answer):
-            # Extract each [number](url)
-            inner_links = re.findall(r"\[(\d+)\]\((" + BASE_URL_RE + r")\)", multi_block)
-            source_keys = []
+        for full_block in re.findall(multi_pattern, original_answer):
+            # Extract each [n](url) inside the block
+            inner_links = re.findall(r"\[(\d+)\]\((" + BASE_URL_RE + r")\)", full_block)
+            if not inner_links:
+                continue
 
+            source_keys = []
             for match_num, full_link in inner_links:
                 source_key = f"[source{match_num}]"
                 if source_key not in source_dict:
@@ -99,23 +99,16 @@ class node:
                 source_keys.append(source_key)
 
             replacement_string = "[" + ",".join(source_keys) + "]"
+            modified_answer = modified_answer.replace(full_block, replacement_string, 1)
 
-            # Escape special chars before substitution
-            escaped_block = re.escape(f"[[{multi_block}]]")
-            modified_answer = re.sub(escaped_block, replacement_string, modified_answer, count=1)
-
-        # --- 2️⃣ Handle single links (that weren't in multi-blocks) ---
-        single_pattern = (
-            r"\[\[(\d+)\]\((" + BASE_URL_RE + r")\)\]"
-        )
+        # ---Handle remaining single [[n](url)]] links ---
+        single_pattern = r"\[\[(\d+)\]\((" + BASE_URL_RE + r")\)\]"
         for match_num, full_link in re.findall(single_pattern, original_answer):
             source_key = f"[source{match_num}]"
             if source_key not in source_dict:
                 source_dict[source_key] = full_link
-            # Replace once per link
             link_block = f"[[{match_num}]({full_link})]"
-            escaped_block = re.escape(link_block)
-            modified_answer = re.sub(escaped_block, source_key, modified_answer, count=1)
+            modified_answer = modified_answer.replace(link_block, source_key, 1)
 
         return modified_answer, source_dict
     
