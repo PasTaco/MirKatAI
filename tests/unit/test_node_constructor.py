@@ -413,3 +413,21 @@ def test_cryp_decrypt(monkeypatch) -> None:
     print("Decrypted Text:")
     print(decrypted_text)
     assert original_text == decrypted_text
+
+
+def test_decrypt_many_links_with_space(monkeypatch) -> None:
+    """Check that the node decrypts text links correctly."""
+    node_obj = node()
+    original_text = "MicroRNAs (miRNAs) are small non-coding RNAs that play a crucial role in regulating gene expression and have been implicated in the development of sarcopenia.[[1](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGrgn08Bhxge8d74E-Y6tQaZo2JEjATx8-N4weY52rm4zU7C4WRVozR0ZcBbiBk10m26ONW4Pgt1ODYmNVycLzdULDsFDoSbEFq6ZRGa6h17EIWl921u0RAMOwM_lt0X1NB8WMkVj9SQUNq),[2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu)] " \
+    "Alterations in miRNA expression levels can contribute to muscle atrophy and sarcopenia by affecting various signaling pathways.[[2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu)]"
+    crypted_text = "MicroRNAs (miRNAs) are small non-coding RNAs that play a crucial role in regulating gene expression and have been implicated in the development of sarcopenia.[[source1], [source2]] Alterations in miRNA expression levels can contribute to muscle atrophy and sarcopenia by affecting various signaling pathways.[[source2]]"
+    source_1 =  "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGrgn08Bhxge8d74E-Y6tQaZo2JEjATx8-N4weY52rm4zU7C4WRVozR0ZcBbiBk10m26ONW4Pgt1ODYmNVycLzdULDsFDoSbEFq6ZRGa6h17EIWl921u0RAMOwM_lt0X1NB8WMkVj9SQUNq"
+    source_2 =  "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEf_20BAbJj733X_kaAinxts3TcMhzAUtJBxOoC0hlZ8mMWj-dQHi3g3Ae9BcXCQXK4P5kHYLRJcANBM3wY6bvWk68pabqS0NKxIbljcU08ZW30aVc3wSZvVjdh0dcYxYqnzSIvnrjjqVMu"
+    
+    source_dict = {
+        "[source1]": source_1,
+        "[source2]": source_2
+    }
+    decrypted_text = node_obj.decrypt_links(crypted_text, source_dict)
+    print(decrypted_text)
+    assert original_text == decrypted_text

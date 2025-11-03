@@ -88,6 +88,8 @@ class node:
         matches_big_brackets = pattern_big_brackets.findall(modified_answer)
 
         inner_pattern = re.compile(rf"\[(\d+)\]\(({BASE_URL_RE})\)")
+        inner_pattern = re.compile(rf"\[\s*(\d+)\s*\]\(\s*({BASE_URL_RE})\s*\)")
+
 
         for full_block in matches_big_brackets:
             # find all [n](url) inside this block

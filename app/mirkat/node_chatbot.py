@@ -186,6 +186,7 @@ class ChatbotNode(node):
             "answer": answer, # Update answer with the router's response
             "finished": finished, # Use .get for safety
             "bibliography": state.get("bibliography", AIMessage(content="")),
+            "bibliography_dict": state.get("bibliography_dict", None),
             "original_query": orginal_query, # Add the original query
             "trys": trys + 1, # Increment the number of tries
             "answer_source": 'ChatbotNode', # Add the source of the answer

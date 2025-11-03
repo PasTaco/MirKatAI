@@ -151,7 +151,7 @@ FORMAT_ANSWER_INSTRUCTIONS: |
         `PLOT_NODE`: `This node can generate plots using matplotlib and seaborn only. It needs to be given the explict values for the plots.`
       },
 
-      `IMPORTANT: If the last answer_source is LITERATURE_NODE, add the latest history item as it is, since it contains the references. The [[n](link)]] format is important and should be kept as it is.`,
+      `IMPORTANT: If the last answer_source is LITERATURE_NODE, add the latest history item as it is, since it contains the references. The [[sourcen]], [[sourcen-1,sourcen]] format is important and should be kept as it is. No exceptions.`,
 
       `input_format`: {
         `original_query`: `The user's query`,
@@ -243,13 +243,13 @@ FORMAT_ANSWER_INSTRUCTIONS: |
       "trys": 1,
       "try_limit": 5,
       "history": [
-        "**hsa-miR-1:** \n *Primarily associated with skeletal muscle development in mammals, hsa-miR-1 is a muscle-specific microRNA crucial for early cardiogenesis and cardiac contraction.[[1](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHWXGTv1w==)] \n 1. [mirbase.org](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHWXGTv1w==)"
+        "**hsa-miR-1:** \n *Primarily associated with skeletal muscle development in mammals, hsa-miR-1 is a muscle-specific microRNA crucial for early cardiogenesis and cardiac contraction.[[source1]] \n "
               ]
      }
      output:
      {
             "answer": "YES",
-            "return": "**hsa-miR-1:** \n *Primarily associated with skeletal muscle development in mammals, hsa-miR-1 is a muscle-specific microRNA crucial for early cardiogenesis and cardiac contraction.[[1](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHWXGTv1w==)] \n 1. [mirbase.org](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHWXGTv1w==)"
+            "return": "**hsa-miR-1:** \n *Primarily associated with skeletal muscle development in mammals, hsa-miR-1 is a muscle-specific microRNA crucial for early cardiogenesis and cardiac contraction.[[source1]] \n "
      }
    
      input:
@@ -313,14 +313,14 @@ FORMAT_ANSWER_INSTRUCTIONS: |
           `answer_source`: `LITERATURE_NODE`
           `trys`: `4`
           `try_limit`: `5`
-          `history`: `["miR1 is an important microRNA [1](https://vertexaisearch.cloud.google.com/grounding-api-redirect/ApA==) and let7 is the most studied [2](https://vertexaisearch.cloud.google.com/grounding-api-redirect/ABA==)",
-                       "The microRNA with the most targets in the database is gga-miR-6701-3p, with 9309 targets.", "mir-155 is implicated in a lot of cancer [1](https://vertexaisearch.cloud.google.com/grounding-api-redirect/Axe==)",
+          `history`: `["miR1 is an important microRNA [source1] and let7 is the most studied [source2]",
+                       "The microRNA with the most targets in the database is gga-miR-6701-3p, with 9309 targets.", "mir-155 is implicated in a lot of cancer [source3]",
                        "let-7 is the mir with the highest score,"]`
         }
      output (This is the last try,do your best with the resources you have):
      {
             "answer": "YES",
-            "return": "There is no a best microRNA, but there are relevant microRNAS like miR1 [1](https://vertexaisearch.cloud.google.com/grounding-api-redirect/ApA==) and let7 [2,3](https://vertexaisearch.cloud.google.com/grounding-api-redirect/ABA==) that have high relevance, let 7 is also the miR with the highest score in the database, but gga-miR-6701-3p has the most targets with 9309 targets. ".
+            "return": "There is no a best microRNA, but there are relevant microRNAS like miR1 [source1] and let7 [source2] that have high relevance, let 7 is also the miR with the highest score in the database, but gga-miR-6701-3p has the most targets with 9309 targets. ".
             "media": None
      }
      input: {
