@@ -58,6 +58,50 @@ class node:
     def log_message(self, message):
         """Log the message to the console."""
         logging.info("User:" + self.user + " " + self.logging_key + " " + message)
+
+    def cript_links(self, original_answer: str) -> tuple[str, dict]:
+        """ This Function will take the text that contain the vertex link to the soruces, it is going to map the link to a short string like [source1], [source2], etc.
+        It will save the original link in a dictionary and return the text with the mapped links.
+        The text link will have a fromat
+
+        [[4](https://vertexaisearch.cloud.google.com/grounding-api-redirect/longstring)]
+        Args:
+            original_answer (str): The original text with the links.
+        Returns:
+            tuple[str, dict]: The text with the mapped links and the dictionary with the original links
+        """
+        source_dict = {}
+        modified_answer = original_answer
+        pattern = r"\[\[(\d+)\]\(https://vertexaisearch\.cloud\.google\.com/grounding-api-redirect/[^\)]+\)\]"
+        matches = re.findall(pattern, original_answer)
+        for match in matches:
+            source_key = f"[source{match}]"
+            if source_key not in source_dict:
+                full_link_pattern = r"\[\[" + match + r"\]\((https://vertexaisearch\.cloud\.google\.com/grounding-api-redirect/[^\)]+)\)\]"
+                full_link_match = re.search(full_link_pattern, original_answer)
+                if full_link_match:
+                    full_link = full_link_match.group(1)
+                    source_dict[source_key] = full_link
+                    modified_answer = re.sub(full_link_pattern, source_key, modified_answer, count=1)
+        return modified_answer, source_dict
+    
+    def decrypt_links(self, answer_with_links: str, source_dict: dict) -> str:
+        """ This Function will take the text that contain the mapped links like [source1], [source2], etc.
+        It will replace the mapped links with the original links from the source_dict.
+
+        Args:
+            answer_with_links (str): The text with the mapped links.
+            source_dict (dict): The dictionary with the original links.
+        Returns:
+            str: The text with the original links.
+        """
+        modified_answer = answer_with_links
+        for source_key, full_link in source_dict.items():
+            # replace [source1[ with just [[1](full_link)]]]
+            source_name = source_key.replace("source", "")
+            modified_answer = modified_answer.replace(source_key, f"[{source_name}({full_link})]")
+        return modified_answer
+
     def escape_newlines_in_json_string(self, json_str: str) -> str:
         # Replace literal newlines inside JSON string values only
         def replacer(match):
