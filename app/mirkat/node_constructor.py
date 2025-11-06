@@ -18,6 +18,8 @@ import json
 import sys
 # save logs
 import logging
+import regex
+
 # Make sure stdout/stderr use UTF-8
 sys.stdout.reconfigure(encoding='utf-8')
 sys.stderr.reconfigure(encoding='utf-8')
@@ -57,7 +59,74 @@ class node:
         return None
     def log_message(self, message):
         """Log the message to the console."""
+        if type(message) is not str:
+            message = str(message)
         logging.info("User:" + self.user + " " + self.logging_key + " " + message)
+
+    def cript_links(self, original_answer: str) -> tuple[str, dict]:
+        """ This Function will take the text that contain the vertex link to the soruces, it is going to map the link to a short string like [source1], [source2], etc.
+        It will save the original link in a dictionary and return the text with the mapped links.
+        The text link will have a fromat
+
+        [[4](https://vertexaisearch.cloud.google.com/grounding-api-redirect/longstring)]
+
+        or accumulate multiple links like
+         [[4](https://vertexaisearch.cloud.google.com/grounding-api-redirect/longstring),[5](https://vertexaisearch.cloud.google.com/grounding-api-redirect/other_longstring)]
+
+        Args:
+            original_answer (str): The original text with the links.
+        Returns:
+            tuple[str, dict]: The text with the mapped links and the dictionary with the original links
+        """
+        BASE_URL_RE = r"https://vertexaisearch\.cloud\.google\.com/grounding-api-redirect/[^\)]+"
+
+        source_dict = {}
+        modified_answer = original_answer
+
+        pattern_big_brackets = regex.compile(r"\[(?:[^\[\]]|(?R))*\]")
+
+        matches_big_brackets = pattern_big_brackets.findall(modified_answer)
+
+        inner_pattern = re.compile(rf"\[(\d+)\]\(({BASE_URL_RE})\)")
+        inner_pattern = re.compile(rf"\[\s*(\d+)\s*\]\(\s*({BASE_URL_RE})\s*\)")
+
+
+        for full_block in matches_big_brackets:
+            # find all [n](url) inside this block
+            inner_links = inner_pattern.findall(full_block)
+            if not inner_links:
+                continue
+
+            source_keys = []
+            for num, url in inner_links:
+                key = f"[source{num}]"
+                if key not in source_dict:
+                    source_dict[key] = url
+                source_keys.append(key)
+
+            # create replacement string
+            replacement = "[" + ",".join(source_keys) + "]"
+            # replace the original block in the text
+            modified_answer = modified_answer.replace(f"{full_block}", replacement, 1)
+        return modified_answer, source_dict
+
+    def decrypt_links(self, answer_with_links: str, source_dict: dict) -> str:
+        """ This Function will take the text that contain the mapped links like [source1], [source2], etc.
+        It will replace the mapped links with the original links from the source_dict.
+
+        Args:
+            answer_with_links (str): The text with the mapped links.
+            source_dict (dict): The dictionary with the original links.
+        Returns:
+            str: The text with the original links.
+        """
+        modified_answer = answer_with_links
+        for source_key, full_link in source_dict.items():
+            # replace [source1[ with just [[1](full_link)]]]
+            source_name = source_key.replace("source", "")
+            modified_answer = modified_answer.replace(source_key, f"{source_name}({full_link})")
+        return modified_answer
+
     def escape_newlines_in_json_string(self, json_str: str) -> str:
         # Replace literal newlines inside JSON string values only
         def replacer(match):

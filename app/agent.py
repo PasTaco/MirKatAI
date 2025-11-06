@@ -286,6 +286,7 @@ initial_state = {
     "original_query": "",
     "answer_source": "Human",
     "trys": 0,
+    "bibliography_dict": None,
     "history": [] 
 }
 current_state = initial_state

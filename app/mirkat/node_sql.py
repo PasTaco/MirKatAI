@@ -94,7 +94,7 @@ class SQLNode(node):
         new_answer = AIMessage(content=response.text)
         history = state.get("history", [])
 
-        return {
+        return {**state,
             #"messages": response.content,
             "original_query": state["original_query"], # Add the router's decision/response
             "messages": AIMessage(content=""), # Add the router's decision/response

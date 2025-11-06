@@ -135,6 +135,12 @@ class ChatbotNode(node):
             if compleate:
                 #returned_answer = "***FINISH***" + returned_answer
                 finished = True
+                if state["bibliography_dict"]:
+                    self.log_message(f"Answer with placeholders:{returned_answer}")
+                    returned_answer = self.decrypt_links(returned_answer, state["bibliography_dict"])
+                    self.log_message(f"Answer with the links: {returned_answer}")
+                else:
+                    self.log_message("No links to add")
 
             messages =  AIMessage(content=f"{returned_answer}")
             response = AIMessage(content=f"{returned_answer}")
@@ -180,6 +186,7 @@ class ChatbotNode(node):
             "answer": answer, # Update answer with the router's response
             "finished": finished, # Use .get for safety
             "bibliography": state.get("bibliography", AIMessage(content="")),
+            "bibliography_dict": state.get("bibliography_dict", None),
             "original_query": orginal_query, # Add the original query
             "trys": trys + 1, # Increment the number of tries
             "answer_source": 'ChatbotNode', # Add the source of the answer
