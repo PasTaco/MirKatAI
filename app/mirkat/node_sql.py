@@ -1,12 +1,10 @@
-from langchain_core.messages import ( 
-    AIMessage
-    )
-from google.genai.types import GenerateContentResponse, Content, Part
 from google.genai import types
-from app.mirkat.plot_functions import PlotFunctons
+from google.genai.types import Content, GenerateContentResponse, Part
+from langchain_core.messages import AIMessage
+
 from app.mirkat.global_variables import SQL_QUERIES
 from app.mirkat.node_constructor import node
-
+from app.mirkat.plot_functions import PlotFunctons
 
 # save logs
 
@@ -40,47 +38,47 @@ class SQLNode(node):
         """Check if response contains a function call."""
         if not response.candidates:
             return False
-        
+
         candidate = response.candidates[0]
         if not hasattr(candidate, 'content') or not candidate.content:
             return False
-        
+
         if not hasattr(candidate.content, 'parts') or not candidate.content.parts:
             return False
-        
+
         # Check if any part is a function call
         for part in candidate.content.parts:
             if hasattr(part, 'function_call') and part.function_call:
                 return True
-        
+
         return False
 
     def _extract_function_call(self, response):
         """Extract the function call from response."""
         if not response.candidates:
             return None
-        
+
         candidate = response.candidates[0]
         if not hasattr(candidate, 'content') or not candidate.content:
             return None
-        
+
         if not hasattr(candidate.content, 'parts') or not candidate.content.parts:
             return None
-        
+
         # Find and return the first function call
         for part in candidate.content.parts:
             if hasattr(part, 'function_call') and part.function_call:
                 return part.function_call
-        
+
         return None
 
     def _execute_function(self, function_call):
         """Execute the function call and return results."""
         function_name = function_call.name
         function_args = function_call.args or {}
-        
+
         self.log_message(f"Executing function: {function_name} with args: {function_args}")
-        
+
         # Find and execute the appropriate function
         # self.functions is a list of Python callables (from DBTools)
         for func in self.functions:
@@ -93,14 +91,14 @@ class SQLNode(node):
                 except Exception as e:
                     self.log_message(f"Error executing function {function_name}: {e}")
                     return {'error': str(e)}
-        
+
         self.log_message(f"Function {function_name} not found in available functions")
         return {'error': f'Function {function_name} not found'}
 
     def _truncate_result_if_needed(self, result):
         """
         Truncate query results to prevent token exhaustion while preserving utility.
-        
+
         Returns modified result with:
         - First N rows as samples
         - Total count
@@ -108,15 +106,15 @@ class SQLNode(node):
         """
         if not isinstance(result, dict) or 'result' not in result:
             return result
-        
+
         result_list = result['result']
-        
+
         # Handle empty results
         if not result_list:
             return result
-        
+
         result_str_len = len(str(result))
-        
+
         if len(result_list) > self.max_result_rows or result_str_len > self.max_result_chars:
             truncated = {
                 'result': result_list[:self.max_result_rows],
@@ -129,32 +127,32 @@ class SQLNode(node):
                     'Instead, use a subquery: WHERE column IN (SELECT ... original query ...)'
                 )
             }
-            
+
             self.log_message(
                 f"Truncated large query result: {len(result_list)} rows "
                 f"({result_str_len} chars) -> {self.max_result_rows} rows shown"
             )
-            
+
             return truncated
-        
+
         return result
 
     def _format_function_response(self, function_call, result):
         """Format result as Content for next iteration."""
         # Create a FunctionResponse Part
         from google.genai.types import FunctionResponse
-        
+
         function_response = FunctionResponse(
             name=function_call.name,
             response=result
         )
-        
+
         # Create a Part with the function response
         part = Part(function_response=function_response)
-        
+
         # Create Content with the part
         content = Content(parts=[part], role="user")
-        
+
         return content
 
     def run_model(self, messages):
@@ -162,14 +160,14 @@ class SQLNode(node):
         self.log_message(f"Message entering run model: {messages}")
         text = messages.content
         self.log_message(f"Message going to the sql model: {text}")
-        
+
         max_iterations = 10  # Prevent infinite loops
         # Store all function calls and responses for history
         all_function_calls = []
-        
+
         for iteration in range(max_iterations):
             self.log_message(f"Function calling iteration {iteration + 1}/{max_iterations}")
-            
+
             inner_tries = 1
             response = None
             while inner_tries <= 2:
@@ -183,26 +181,26 @@ class SQLNode(node):
                     else:
                         self.log_message(f"Error sending message to SQL model: {e}. No more retries.")
                         raise e
-            
+
             # Check if model wants to call a function
             if self._has_function_call(response):
                 function_call = self._extract_function_call(response)
-                
+
                 if function_call:
                     self.log_message(f"Model requested function call: {function_call.name}")
-                    
+
                     # Execute the function
                     result = self._execute_function(function_call)
-                    
+
                     # Store the original call and response for history
                     all_function_calls.append({
                         'function_call': function_call,
                         'result': result
                     })
-                    
+
                     # CRITICAL: Truncate result if too large
                     truncated_result = self._truncate_result_if_needed(result)
-                    
+
                     # Format the (possibly truncated) result as content for next iteration
                     text = self._format_function_response(function_call, truncated_result)
                 else:
@@ -212,26 +210,26 @@ class SQLNode(node):
                 # No more function calls, we're done
                 self.log_message(f"Model finished after {iteration + 1} iterations")
                 break
-        
+
         # Reconstruct automatic_function_calling_history for backward compatibility
         # This allows existing code to extract queries using get_queries()
         response.automatic_function_calling_history = self._reconstruct_history(all_function_calls)
-        
+
         return response
-    
+
     def _reconstruct_history(self, all_function_calls):
         """Reconstruct the function calling history in the expected format."""
         history = []
-        
+
         for call_info in all_function_calls:
             function_call = call_info['function_call']
             result = call_info['result']
-            
+
             # Create a Content object with function_call part
             call_part = Part(function_call=function_call)
             call_content = Content(parts=[call_part], role="model")
             history.append(call_content)
-            
+
             # Create a Content object with function_response part
             from google.genai.types import FunctionResponse
             function_response = FunctionResponse(
@@ -241,7 +239,7 @@ class SQLNode(node):
             response_part = Part(function_response=function_response)
             response_content = Content(parts=[response_part], role="user")
             history.append(response_content)
-        
+
         return history
 
     def get_queries(self, callings):
@@ -256,7 +254,7 @@ class SQLNode(node):
         self.log_message(f"State: {state}")
         history = state.get('history', [])
         # If history is empty, use the last message
-        
+
         messages = state['request']
         if not messages:
             self.log_message("SQL processor called with no messages.")
@@ -296,6 +294,6 @@ class SQLNode(node):
             "finished": state.get("finished", False), # Use .get for safety
             "answer_source": 'SQL_NODE',
             "trys": state.get("trys", 0) + 1, # Use .get for safety
-            "history": history + [str(queries) + response.text], # Update history with the new message
+            "history": [*history, str(queries) + response.text], # Update history with the new message
         }
 

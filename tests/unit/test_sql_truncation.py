@@ -15,19 +15,18 @@
 Unit tests for SQL Node truncation and manual function calling.
 Tests the fix for 429 RESOURCE_EXHAUSTED errors.
 """
-import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 
-from app.mirkat.node_sql import SQLNode
+import pytest
 from google.genai.types import (
-    GenerateContentResponse,
     Candidate,
     Content,
-    Part,
     FunctionCall,
-    FunctionResponse
+    GenerateContentResponse,
+    Part,
 )
-from langchain_core.messages import AIMessage
+
+from app.mirkat.node_sql import SQLNode
 
 
 @pytest.fixture
@@ -145,7 +144,7 @@ class TestSQLNodeFunctionCalling:
         part = Part(function_call=function_call)
         content = Content(parts=[part], role="model")
         candidate = Candidate(content=content)
-        
+
         response = Mock(spec=GenerateContentResponse)
         response.candidates = [candidate]
 
@@ -157,7 +156,7 @@ class TestSQLNodeFunctionCalling:
         part = Part(text="Here is your answer")
         content = Content(parts=[part], role="model")
         candidate = Candidate(content=content)
-        
+
         response = Mock(spec=GenerateContentResponse)
         response.candidates = [candidate]
 
@@ -173,12 +172,12 @@ class TestSQLNodeFunctionCalling:
         part = Part(function_call=function_call)
         content = Content(parts=[part], role="model")
         candidate = Candidate(content=content)
-        
+
         response = Mock(spec=GenerateContentResponse)
         response.candidates = [candidate]
 
         extracted = mock_sql_node._extract_function_call(response)
-        
+
         assert extracted is not None
         assert extracted.name == "execute_query"
         assert extracted.args["sql"] == "SELECT * FROM mirna"
@@ -201,7 +200,7 @@ class TestSQLNodeFunctionCalling:
             )
 
             result = sql_node._execute_function(function_call)
-            
+
             assert 'result' in result
             assert result['result'] == [("mir-1",), ("mir-2",)]
 
@@ -213,7 +212,7 @@ class TestSQLNodeFunctionCalling:
         )
 
         result = mock_sql_node._execute_function(function_call)
-        
+
         assert 'error' in result
         assert 'not found' in result['error'].lower()
 
@@ -234,7 +233,7 @@ class TestSQLNodeFunctionCalling:
             )
 
             result = sql_node._execute_function(function_call)
-            
+
             assert 'error' in result
             assert 'Database error' in result['error']
 
@@ -307,12 +306,12 @@ class TestSQLNodeIntegration:
 
             # Truncate result
             truncated = sql_node._truncate_result_if_needed(result)
-            
+
             # Verify truncation
             assert truncated['_truncated'] is True
             assert len(truncated['result']) == 50
             assert truncated['total_count'] == 5000
-            
+
             # Verify instruction is present
             assert '_instruction' in truncated
             assert 'subquery' in truncated['_instruction'].lower()
@@ -337,10 +336,10 @@ class TestSQLNodeIntegration:
 
             # Execute function
             result = sql_node._execute_function(function_call)
-            
+
             # Truncate result (should not truncate)
             processed = sql_node._truncate_result_if_needed(result)
-            
+
             # Verify no truncation
             assert '_truncated' not in processed
             assert processed == result
