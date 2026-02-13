@@ -1,3 +1,9 @@
+import json
+import os
+from datetime import datetime
+from hashlib import md5
+from typing import Any, Tuple, Optional
+
 from langchain_core.messages import ( 
     AIMessage
     )
@@ -11,6 +17,9 @@ from app.mirkat.node_constructor import node
 # save logs
 
 class SQLNode(node):
+    # Maximum characters for table content before saving to file
+    MAX_TABLE_SIZE_CHARS = 5000
+    
     def __init__(self, llm=None, instructions=None, functions=None,  welcome=None):
         super().__init__(llm, instructions, functions, welcome, logging_key="SQL node.- ")
         self.set_model()
@@ -57,6 +66,86 @@ class SQLNode(node):
         queries = plotting_tools_instance.get_queries()
         return queries
 
+    def _process_query_results(self, queries: Any) -> Tuple[str, Optional[str]]:
+        """Process query results and determine if they should be saved to a file.
+        
+        Args:
+            queries: The query results to process
+            
+        Returns:
+            Tuple of (summary_string, file_path_or_none)
+            - For small results: (full_results_string, None)
+            - For large results: (summary_string, file_path)
+        """
+        queries_str = str(queries)
+        queries_length = len(queries_str)
+        
+        # Check if results are small enough to include directly
+        if queries_length < self.MAX_TABLE_SIZE_CHARS:
+            self.log_message(f"Query results size ({queries_length} chars) is below threshold. Adding to history.")
+            return queries_str, None
+        
+        # Results are large - save to file and create summary
+        self.log_message(f"Query results size ({queries_length} chars) exceeds threshold ({self.MAX_TABLE_SIZE_CHARS}). Saving to file.")
+        
+        try:
+            # Create temp directory if it doesn't exist
+            temp_dir = "/tmp/sql_results"
+            os.makedirs(temp_dir, exist_ok=True)
+            
+            # Generate unique filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            content_hash = md5(queries_str.encode()).hexdigest()[:8]
+            filename = f"sql_results_{timestamp}_{content_hash}.json"
+            filepath = os.path.join(temp_dir, filename)
+            
+            # Save full results to file
+            with open(filepath, 'w') as f:
+                if isinstance(queries, dict):
+                    json.dump(queries, f, indent=2)
+                else:
+                    json.dump({"results": queries_str}, f, indent=2)
+            
+            self.log_message(f"Saved query results to: {filepath}")
+            
+            # Create summary
+            summary_parts = []
+            
+            if isinstance(queries, dict):
+                # Extract information from dict structure
+                total_rows = 0
+                columns = []
+                sample_data = []
+                
+                for key, value in queries.items():
+                    if isinstance(value, list):
+                        total_rows += len(value)
+                        if len(value) > 0 and isinstance(value[0], (list, tuple)):
+                            # Get first few rows as sample
+                            sample_data.append(f"{key}: {value[:3]}")
+                        else:
+                            sample_data.append(f"{key}: {value[:5]}")
+                    
+                summary_parts.append(f"Query results contain {len(queries)} query/queries")
+                if total_rows > 0:
+                    summary_parts.append(f"with approximately {total_rows} total rows")
+                if sample_data:
+                    summary_parts.append(f"Sample data: {'; '.join(sample_data)}")
+            else:
+                # For non-dict queries, provide basic summary
+                summary_parts.append(f"Query results: {queries_str[:500]}...")
+            
+            summary_parts.append(f"Full results saved to: {filepath}")
+            summary = ". ".join(summary_parts)
+            
+            return summary, filepath
+            
+        except Exception as e:
+            self.log_message(f"Error saving query results to file: {e}")
+            # Fallback: truncate the results
+            truncated = queries_str[:self.MAX_TABLE_SIZE_CHARS] + "... [truncated]"
+            return truncated, None
+
     def get_node(self,state):
         """The sql llm that will check for the sql questions and get a json file in response."""
 
@@ -93,6 +182,9 @@ class SQLNode(node):
         SQL_QUERIES.update(queries)
         new_answer = AIMessage(content=response.text)
         history = state.get("history", [])
+        
+        # Process query results (may save to file if large)
+        queries_summary, file_path = self._process_query_results(queries)
 
         return {**state,
             #"messages": response.content,
@@ -104,6 +196,6 @@ class SQLNode(node):
             "finished": state.get("finished", False), # Use .get for safety
             "answer_source": 'SQL_NODE',
             "trys": state.get("trys", 0) + 1, # Use .get for safety
-            "history": history + [str(queries) + response.text], # Update history with the new message
+            "history": history + [queries_summary + response.text], # Update history with the new message
         }
 
