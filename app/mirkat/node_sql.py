@@ -93,8 +93,8 @@ class SQLNode(node):
             temp_dir = "/tmp/sql_results"
             os.makedirs(temp_dir, exist_ok=True)
             
-            # Generate unique filename
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            # Generate unique filename with microseconds for better uniqueness
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
             content_hash = md5(queries_str.encode()).hexdigest()[:8]
             filename = f"sql_results_{timestamp}_{content_hash}.json"
             filepath = os.path.join(temp_dir, filename)
@@ -126,7 +126,7 @@ class SQLNode(node):
                         else:
                             sample_data.append(f"{key}: {value[:5]}")
                     
-                summary_parts.append(f"Query results contain {len(queries)} query/queries")
+                summary_parts.append(f"Query results contain {len(queries)} {'query' if len(queries) == 1 else 'queries'}")
                 if total_rows > 0:
                     summary_parts.append(f"with approximately {total_rows} total rows")
                 if sample_data:
@@ -185,6 +185,8 @@ class SQLNode(node):
         
         # Process query results (may save to file if large)
         queries_summary, file_path = self._process_query_results(queries)
+        # Note: file_path is currently unused but available for future enhancements
+        # (e.g., passing to plot node for accessing full data)
 
         return {**state,
             #"messages": response.content,
