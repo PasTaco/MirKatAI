@@ -104,10 +104,13 @@ class DBTools:
         
         return tables
 
-    def execute_query(self, sql: str, query_name:str) -> list[list[str]]:
+    def execute_query(self, sql: str, query_name:str) -> dict:
         """Execute an SQL statement, returning the results.
-            params sql: is the formated mySQL query
-            params query_name: name of the query only alfanumeric characters.
+            params sql: is the formatted mySQL query
+            params query_name: name of the query only alphanumeric characters.
+            
+            Returns:
+                dict: Dictionary with 'result' (list of rows) and 'columns' (list of column names)
             """
         print(f' - DB CALL: execute_query({sql})')
 
@@ -115,12 +118,22 @@ class DBTools:
 
         cursor.execute(sql)
         results = cursor.fetchall()
+        
+        # Get column names from cursor description
+        columns = [desc[0] for desc in cursor.description] if cursor.description else []
+        
         print(f"Results from SQL are: {results}")
         with open(f"{query_name}.tsv", "w", newline="") as f:
             writer = csv.writer(f, delimiter="\t")
-            writer.writerows(results) 
-        # if results is too large, get the first 100 rows
-        if len(results) > 100:
-            results = results[:100]
+            # Write header row with column names
+            if columns:
+                writer.writerow(columns)
+            writer.writerows(results)
+        
         cursor.close()
-        return results
+        
+        # Return as dictionary with metadata
+        return {
+            'result': results,
+            'columns': columns
+        }
