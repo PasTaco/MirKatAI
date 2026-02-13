@@ -86,6 +86,24 @@ SQL_INSTRUCTIONS : |
 
   Avoid select all since the tables are huge. If the user asks for long queries, use a random sample of max 500 rows. 
 
+  CRITICAL QUERY OPTIMIZATION RULES:
+  - When you receive truncated results with `_truncated: true`, you MUST use subqueries in follow-up queries
+  - NEVER write queries like: WHERE mirna_id IN ('id1', 'id2', ..., 'id1000') with many literal values
+  - ALWAYS use subqueries: WHERE mirna_id IN (SELECT mirna_id FROM targets GROUP BY mirna_id HAVING COUNT(*) >= 5)
+  - This prevents token exhaustion and is more efficient
+  - Subqueries allow you to work with unlimited result sets without loading all values into context
+  
+  EXAMPLES OF QUERY OPTIMIZATION:
+  
+  Bad (causes token exhaustion):
+    Step 1: Get IDs → ['id1', 'id2', ..., 'id5000']
+    Step 2: SELECT * FROM mirna WHERE mirna_id IN ('id1', 'id2', ..., 'id5000')
+  
+  Good (efficient with subquery):
+    Single query: SELECT * FROM mirna WHERE mirna_id IN (
+      SELECT mirna_id FROM targets GROUP BY mirna_id HAVING COUNT(*) >= 5
+    )
+
   Examples:
 
   human query: how many mirs are there?
@@ -106,6 +124,10 @@ SQL_INSTRUCTIONS : |
   human query: What are the seeds of the microRNAs that expressed in muscle and how many of those mirnas have said seed?
   sql_query: execute_query(SELECT ms.seed, COUNT(DISTINCT mt.mirna) FROM mirna_seeds ms JOIN mirna_mature mm ON ms.auto_mature = mm.mature_name JOIN mirna_pre_mature mpm ON mm.auto_mature = mpm.auto_mature JOIN mirna m ON mpm.auto_mirna = m.auto_mirna JOIN mirna_tissues mt ON m.mirna_ID = mt.mirna WHERE mt.organ = 'muscle' GROUP BY ms.seed
  
+  human query: Find all miRNAs with at least 5 target genes and retrieve their sequences
+  Good approach - use subquery to avoid loading thousands of IDs into context:
+  sql query: SELECT m.mirna_id, m.sequence FROM mirna m WHERE m.mirna_id IN (SELECT mirna_id FROM targets GROUP BY mirna_id HAVING COUNT(*) >= 5)
+  
   """
 
 
