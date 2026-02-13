@@ -431,3 +431,83 @@ def test_decrypt_many_links_with_space(monkeypatch) -> None:
     decrypted_text = node_obj.decrypt_links(crypted_text, source_dict)
     print(decrypted_text)
     assert original_text == decrypted_text
+
+
+def test_sql_process_query_results_small() -> None:
+    """Test that small query results are returned as-is."""
+    sql_node = SQLNode(instructions="you are a SQL expert", functions=[min, max])
+    
+    # Small query results (< 5000 chars)
+    small_queries = {"query1": "result1", "query2": "result2"}
+    
+    summary, filepath = sql_node._process_query_results(small_queries)
+    
+    # Should return the string representation and no file path
+    assert filepath is None
+    assert "query1" in summary
+    assert "result1" in summary
+
+
+def test_sql_process_query_results_large() -> None:
+    """Test that large query results are saved to file and summarized."""
+    sql_node = SQLNode(instructions="you are a SQL expert", functions=[min, max])
+    
+    # Create large query results (> 5000 chars)
+    large_data = ["row_" + str(i) * 100 for i in range(100)]
+    large_queries = {"query1": large_data}
+    
+    summary, filepath = sql_node._process_query_results(large_queries)
+    
+    # Should return a summary and a file path
+    assert filepath is not None
+    assert os.path.exists(filepath)
+    assert "Query results contain" in summary
+    assert "Full results saved to:" in summary
+    assert filepath in summary
+    
+    # Clean up the created file
+    if filepath and os.path.exists(filepath):
+        os.remove(filepath)
+
+
+def test_sql_get_node_with_large_results(monkeypatch) -> None:
+    """Test that get_node properly handles large query results."""
+    sql_node = SQLNode(instructions="you are a SQL expert", functions=[min, max])
+    
+    # Create large query results (> 5000 chars)
+    large_data = ["row_" + str(i) * 100 for i in range(100)]
+    large_queries = {"query1": large_data}
+    
+    status = {
+        "messages": "",
+        "request": AIMessage(content="Get all data"),
+        "original_query": "Get all data",
+        "history": []
+    }
+    
+    def mock_run_model(*args, **kwargs):
+        fake_response = GenerateContentResponse
+        fake_response.automatic_function_calling_history = 'many functions'
+        fake_response.text = "Here are the results"
+        return fake_response
+    
+    def mock_get_queries(*args, **kwargs):
+        return large_queries
+    
+    monkeypatch.setattr(sql_node, "run_model", mock_run_model)
+    monkeypatch.setattr(sql_node, "get_queries", mock_get_queries)
+    
+    result = sql_node.get_node(status)
+    
+    # Check that history contains a summary, not the full data
+    history_entry = result['history'][0]
+    assert "Full results saved to:" in history_entry
+    assert len(history_entry) < len(str(large_queries))
+    
+    # Clean up any created files
+    import re
+    file_match = re.search(r'/tmp/sql_results/sql_results_\d+_\w+\.json', history_entry)
+    if file_match:
+        filepath = file_match.group(0)
+        if os.path.exists(filepath):
+            os.remove(filepath)
