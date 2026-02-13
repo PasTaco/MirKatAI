@@ -106,8 +106,8 @@ class DBTools:
 
     def execute_query(self, sql: str, query_name:str) -> dict:
         """Execute an SQL statement, returning the results.
-            params sql: is the formated mySQL query
-            params query_name: name of the query only alfanumeric characters.
+            params sql: is the formatted mySQL query
+            params query_name: name of the query only alphanumeric characters.
             
             Returns:
                 dict: Dictionary with 'result' (list of rows) and 'columns' (list of column names)

@@ -207,7 +207,7 @@ def test_truncation_by_character_count() -> None:
         """Mock execute_query that returns data exceeding char threshold."""
         # Create rows with long strings to exceed character limit
         return {
-            'result': [['x' * 1000] for i in range(10)],
+            'result': [['x' * 1000] for _ in range(10)],
             'columns': ['col1']
         }
     
