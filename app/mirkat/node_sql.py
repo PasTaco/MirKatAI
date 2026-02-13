@@ -1,5 +1,5 @@
 from google.genai import types
-from google.genai.types import Content, GenerateContentResponse, Part
+from google.genai.types import Content, FunctionResponse, GenerateContentResponse, Part
 from langchain_core.messages import AIMessage
 
 from app.mirkat.global_variables import SQL_QUERIES
@@ -116,6 +116,9 @@ class SQLNode(node):
         result_str_len = len(str(result))
 
         if len(result_list) > self.max_result_rows or result_str_len > self.max_result_chars:
+            # Note: Instruction is intentionally generic since we don't have access to
+            # the actual query context at truncation time. The model should remember
+            # the query it just executed and use that for the subquery.
             truncated = {
                 'result': result_list[:self.max_result_rows],
                 'total_count': len(result_list),
@@ -124,7 +127,8 @@ class SQLNode(node):
                 '_instruction': (
                     f'Results truncated: showing {min(self.max_result_rows, len(result_list))} of {len(result_list)} total rows. '
                     'DO NOT use these literal values in the next query. '
-                    'Instead, use a subquery: WHERE column IN (SELECT ... original query ...)'
+                    'Instead, use a subquery that reproduces the logic of your previous query, '
+                    'e.g., WHERE column IN (SELECT column FROM ... WHERE ...)'
                 )
             }
 
@@ -140,8 +144,6 @@ class SQLNode(node):
     def _format_function_response(self, function_call, result):
         """Format result as Content for next iteration."""
         # Create a FunctionResponse Part
-        from google.genai.types import FunctionResponse
-
         function_response = FunctionResponse(
             name=function_call.name,
             response=result
@@ -161,7 +163,11 @@ class SQLNode(node):
         text = messages.content
         self.log_message(f"Message going to the sql model: {text}")
 
-        max_iterations = 10  # Prevent infinite loops
+        # Limit iterations to prevent infinite loops while allowing complex multi-step queries.
+        # 10 iterations should be sufficient for most SQL queries that require multiple
+        # function calls (e.g., list_tables, get_table_schema, describe_columns, execute_query).
+        # If a query legitimately needs more iterations, increase this value or make it configurable.
+        max_iterations = 10
         # Store all function calls and responses for history
         all_function_calls = []
 
@@ -231,7 +237,6 @@ class SQLNode(node):
             history.append(call_content)
 
             # Create a Content object with function_response part
-            from google.genai.types import FunctionResponse
             function_response = FunctionResponse(
                 name=function_call.name,
                 response=result
