@@ -11,7 +11,14 @@ from app.mirkat.node_constructor import node
 # save logs
 
 class SQLNode(node):
+<<<<<<< Updated upstream
     def __init__(self, llm=None, instructions=None, functions=None,  welcome=None):
+=======
+    # Maximum characters for table content before saving to file
+    MAX_TABLE_SIZE_CHARS = 5000
+    
+    def __init__(self, llm=None, instructions=None, functions=None,  welcome=None,  max_result_rows=5, max_result_chars=5000):
+>>>>>>> Stashed changes
         super().__init__(llm, instructions, functions, welcome, logging_key="SQL node.- ")
         self.set_model()
 

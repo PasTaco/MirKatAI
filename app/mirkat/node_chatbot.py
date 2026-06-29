@@ -9,6 +9,7 @@ import re
 import json
 from app.mirkat.node_constructor import node
 from svglib.svglib import svg2rlg
+from langsmith import traceable
 
 # get pwd
 import os
@@ -44,7 +45,7 @@ class ChatbotNode(node):
             response_mime_type="application/json"
         )
         self.llm_complete = self.client.chats.create(model=model, config=config_with_code)
-
+    @traceable(name="run_model_master")
     def run_model(self, messages):
         """Run the model with the given messages."""
         response = self.llm_master.invoke(str(self.instructions) + messages)

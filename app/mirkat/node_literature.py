@@ -10,6 +10,8 @@ import os
 import sys
 # save logs
 import logging
+from langsmith import traceable
+
 # Make sure stdout/stderr use UTF-8
 sys.stdout.reconfigure(encoding='utf-8')
 sys.stderr.reconfigure(encoding='utf-8')
@@ -45,7 +47,8 @@ class LiteratureNode(node):
             temperature=0.0,
             max_output_tokens=1250,
             )
-
+    
+    @traceable(name="run_model_literature")
     def run_model(self, user_query):
         """Run the model with the given messages."""
         logging.info(f"Running model with user query: {user_query}")
